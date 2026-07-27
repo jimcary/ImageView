@@ -234,6 +234,13 @@ final class AppDelegate:
         self.recentMenu = recentMenu
         fileMenu.addItem(recentItem)
         fileMenu.addItem(.separator())
+        let saveItem = fileMenu.addItem(
+            withTitle: L10n.text("menu.save"),
+            action: #selector(commitCropAndOverwrite(_:)),
+            shortcut: .save
+        )
+        saveItem.target = self
+        fileMenu.addItem(.separator())
         let printItem = fileMenu.addItem(
             withTitle: L10n.text("menu.print"),
             action: #selector(printCurrentImage(_:)),

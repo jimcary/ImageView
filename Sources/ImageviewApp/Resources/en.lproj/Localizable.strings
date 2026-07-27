@@ -9,6 +9,7 @@
 "menu.no_compatible_applications" = "No Compatible Applications";
 "menu.no_recent" = "No Recent Items";
 "menu.clear_recent" = "Clear Menu";
+"menu.save" = "Save";
 "menu.print" = "Print…";
 "menu.close_window" = "Close Window";
 "menu.preferences" = "Settings…";
@@ -146,5 +147,6 @@
 "shortcut.inspector" = "Info";
 "shortcut.rotateLeft" = "Rotate Left";
 "shortcut.rotateRight" = "Rotate Right";
+"shortcut.save" = "Save";
 "shortcut.pin" = "Pin Image";
 "shortcut.ocr" = "Recognize Text";

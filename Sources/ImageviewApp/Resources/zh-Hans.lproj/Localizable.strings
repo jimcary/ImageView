@@ -9,6 +9,7 @@
 "menu.no_compatible_applications" = "没有兼容的应用";
 "menu.no_recent" = "没有最近项目";
 "menu.clear_recent" = "清除菜单";
+"menu.save" = "保存";
 "menu.print" = "打印…";
 "menu.close_window" = "关闭窗口";
 "menu.preferences" = "设置…";
@@ -146,5 +147,6 @@
 "shortcut.inspector" = "信息";
 "shortcut.rotateLeft" = "向左旋转";
 "shortcut.rotateRight" = "向右旋转";
+"shortcut.save" = "保存";
 "shortcut.pin" = "贴图";
 "shortcut.ocr" = "识别文字";

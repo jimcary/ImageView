@@ -35,6 +35,10 @@ func requestedCommandsUseTheDocumentedDefaultShortcuts() {
         AppPreferences.defaultShortcut(for: .rotateRight)
             == Shortcut(command: .rotateRight, key: "r", modifiers: [.command])
     )
+    #expect(
+        AppPreferences.defaultShortcut(for: .save)
+            == Shortcut(command: .save, key: "s", modifiers: [.command])
+    )
 }
 
 @Test
