@@ -12,6 +12,11 @@
 "menu.preferences" = "Settings…";
 "menu.copy" = "Copy";
 "menu.crop_and_save" = "Crop and Save";
+"menu.sort" = "Sort";
+"menu.image_processing" = "Image Processing";
+"menu.finder_label" = "Finder Label";
+"menu.pin_desktop" = "Pin to Desktop";
+"menu.delete" = "Delete";
 "menu.pin_clipboard" = "Pin Clipboard";
 "menu.recognize_text" = "Recognize Text";
 "menu.previous" = "Previous Image";
@@ -39,6 +44,7 @@
 "toolbar.pin_clipboard" = "Pin Clipboard";
 "toolbar.ocr" = "Recognize Text";
 "toolbar.subject" = "Extract Subject";
+"toolbar.delete" = "Delete";
 "viewer.empty" = "Drop an image or choose File > Open";
 "viewer.loading" = "Loading…";
 "viewer.recognizing" = "Recognizing Text…";
@@ -61,6 +67,7 @@
 "error.overwrite_failed" = "Overwrite Failed";
 "error.ocr_failed" = "Text Recognition Failed";
 "error.subject_failed" = "Subject Extraction Failed";
+"error.delete_failed" = "Delete Failed";
 "error.cannot_overwrite_title" = "Cannot Overwrite This Format";
 "error.cannot_overwrite_message" = "Use Save As to export JPEG, PNG, TIFF, or HEIC.";
 "confirm.overwrite_title" = "Overwrite Original Image?";

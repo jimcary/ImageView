@@ -96,6 +96,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         activeWindowController?.performOCR(sender)
     }
 
+    @objc private func deleteCurrent(_ sender: Any?) {
+        activeWindowController?.deleteCurrent(sender)
+    }
+
     @objc private func commitCropAndOverwrite(_ sender: Any?) {
         activeWindowController?.commitCropAndOverwrite(sender)
     }
@@ -235,6 +239,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             action: #selector(NSText.copy(_:)),
             keyEquivalent: "c"
         )
+        let delete = editMenu.addItem(
+            withTitle: L10n.text("menu.delete"),
+            action: #selector(deleteCurrent(_:)),
+            shortcut: .delete
+        )
+        delete.target = self
         let pastePin = editMenu.addItem(
             withTitle: L10n.text("menu.pin_clipboard"),
             action: #selector(pinClipboard(_:)),

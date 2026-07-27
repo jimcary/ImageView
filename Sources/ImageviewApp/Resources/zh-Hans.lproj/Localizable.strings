@@ -12,6 +12,11 @@
 "menu.preferences" = "设置…";
 "menu.copy" = "复制";
 "menu.crop_and_save" = "裁剪并保存";
+"menu.sort" = "排序";
+"menu.image_processing" = "图像处理";
+"menu.finder_label" = "Finder 标签";
+"menu.pin_desktop" = "贴到桌面";
+"menu.delete" = "删除";
 "menu.pin_clipboard" = "贴图剪贴板内容";
 "menu.recognize_text" = "识别文字";
 "menu.previous" = "上一张";
@@ -39,6 +44,7 @@
 "toolbar.pin_clipboard" = "贴图剪贴板内容";
 "toolbar.ocr" = "识别文字";
 "toolbar.subject" = "提取主体";
+"toolbar.delete" = "删除";
 "viewer.empty" = "拖入图片，或选择“文件 > 打开”";
 "viewer.loading" = "正在载入…";
 "viewer.recognizing" = "正在识别文字…";
@@ -61,6 +67,7 @@
 "error.overwrite_failed" = "覆盖失败";
 "error.ocr_failed" = "文字识别失败";
 "error.subject_failed" = "主体提取失败";
+"error.delete_failed" = "删除失败";
 "error.cannot_overwrite_title" = "无法覆盖此格式";
 "error.cannot_overwrite_message" = "请使用“另存为”导出 JPEG、PNG、TIFF 或 HEIC。";
 "confirm.overwrite_title" = "覆盖原始图片？";

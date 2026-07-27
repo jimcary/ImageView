@@ -217,6 +217,18 @@ final class ViewerSession {
         }
     }
 
+    func moveCurrentToTrash() throws {
+        guard let current = index.current else {
+            throw ImageDecodeError.cannotOpen
+        }
+        _ = try FileManager.default.trashItem(
+            at: current.url,
+            resultingItemURL: nil
+        )
+        _ = index.removeCurrent()
+        decodeCurrent()
+    }
+
     func rotate(clockwise: Bool) {
         recipe = EditRecipe(
             rotationQuarterTurns: recipe.rotationQuarterTurns + (clockwise ? 1 : -1),

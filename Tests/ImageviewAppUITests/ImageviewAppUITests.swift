@@ -40,6 +40,32 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertTrue(app.windows["blue.jpg · 1 / 4"].waitForExistence(timeout: 5))
     }
 
+    func testToolbarUsesDeleteAndOmitsRemovedButtons() {
+        XCTAssertTrue(app.toolbars.buttons["Delete"].exists)
+        XCTAssertFalse(app.toolbars.buttons["Pin Image"].exists)
+        XCTAssertFalse(app.toolbars.buttons["Pin Clipboard"].exists)
+        XCTAssertFalse(app.toolbars.buttons["Extract Subject"].exists)
+    }
+
+    func testDeleteKeyMovesCurrentFixtureToTrashAndSelectsNext() {
+        app.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+        XCTAssertTrue(app.windows["green.png · 1 / 3"].waitForExistence(timeout: 5))
+    }
+
+    func testImageCanvasContextMenuUsesSupportedActions() {
+        let canvas = app.otherElements["imageCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        canvas.rightClick()
+
+        for title in [
+            "Recognize Text", "Actual Size", "Fit to Window", "Sort",
+            "Image Processing", "Finder Label", "Pin to Desktop",
+            "Show in Finder", "Open Default", "Copy", "Delete",
+        ] {
+            XCTAssertTrue(app.menuItems[title].exists, "Missing context menu item: \(title)")
+        }
+    }
+
     func testGridRoundTripReturnsToViewer() {
         app.toolbars.buttons["Grid"].click()
         XCTAssertTrue(app.collectionViews.firstMatch.waitForExistence(timeout: 5))
@@ -79,7 +105,8 @@ final class ImageviewAppUITests: XCTestCase {
         start.press(forDuration: 0.1, thenDragTo: end)
         app.toolbars.buttons["Crop"].click()
         app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
-        app.toolbars.buttons["Pin Image"].click()
+        canvas.rightClick()
+        app.menuItems["Pin to Desktop"].click()
 
         let pin = app.windows["Image Pin"]
         XCTAssertTrue(pin.waitForExistence(timeout: 5))
@@ -87,7 +114,10 @@ final class ImageviewAppUITests: XCTestCase {
     }
 
     func testPinCreatesFloatingImageWindow() {
-        app.toolbars.buttons["Pin Image"].click()
+        let canvas = app.otherElements["imageCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        canvas.rightClick()
+        app.menuItems["Pin to Desktop"].click()
         XCTAssertTrue(app.windows["Image Pin"].waitForExistence(timeout: 5))
     }
 

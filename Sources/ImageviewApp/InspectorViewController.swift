@@ -3,7 +3,7 @@ import ImageviewCore
 
 @MainActor
 final class InspectorViewController: NSViewController {
-    var onTrash: (() -> Void)?
+    var onDeleteRequested: (() -> Void)?
 
     private let textView = NSTextView()
     private let labelPopup = NSPopUpButton()
@@ -125,13 +125,8 @@ final class InspectorViewController: NSViewController {
     }
 
     @objc private func moveToTrash(_ sender: Any?) {
-        guard let url = item?.url else { return }
-        do {
-            _ = try FileManager.default.trashItem(at: url, resultingItemURL: nil)
-            onTrash?()
-        } catch {
-            NSAlert(error: error).runModal()
-        }
+        guard item != nil else { return }
+        onDeleteRequested?()
     }
 
     @objc private func labelChanged(_ sender: Any?) {

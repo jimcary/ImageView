@@ -92,6 +92,20 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         applyFilter()
     }
 
+    func selectSortOrder(_ order: MediaSortOrder) {
+        let index: Int
+        switch order {
+        case .name: index = 0
+        case .extension: index = 1
+        case .creationDate: index = 2
+        case .modificationDate: index = 3
+        case .finderOrder: index = 4
+        case .random: index = 5
+        case .finderLabel: index = 6
+        }
+        sortPopup.selectItem(at: index)
+    }
+
     func numberOfSections(in collectionView: NSCollectionView) -> Int {
         1
     }

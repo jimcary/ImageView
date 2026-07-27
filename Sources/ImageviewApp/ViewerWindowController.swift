@@ -2,7 +2,12 @@ import AppKit
 import ImageviewCore
 
 @MainActor
-final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate {
+final class ViewerWindowController:
+    NSWindowController,
+    NSWindowDelegate,
+    NSToolbarDelegate,
+    NSMenuItemValidation
+{
     var onClose: (() -> Void)?
     var onOpenURLsRequested: (([URL]) -> Void)?
     private enum ToolbarID {
@@ -20,13 +25,11 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         static let flip = NSToolbarItem.Identifier("flip")
         static let flipVertical = NSToolbarItem.Identifier("flipVertical")
         static let crop = NSToolbarItem.Identifier("crop")
+        static let delete = NSToolbarItem.Identifier("delete")
         static let grid = NSToolbarItem.Identifier("grid")
         static let thumbnails = NSToolbarItem.Identifier("thumbnails")
         static let inspector = NSToolbarItem.Identifier("inspector")
-        static let pin = NSToolbarItem.Identifier("pin")
-        static let pastePin = NSToolbarItem.Identifier("pastePin")
         static let ocr = NSToolbarItem.Identifier("ocr")
-        static let subject = NSToolbarItem.Identifier("subject")
         static let flexible = NSToolbarItem.Identifier.flexibleSpace
     }
 
@@ -43,6 +46,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var subjectTask: Task<Void, Never>?
     private var thumbnailHeightConstraint: NSLayoutConstraint?
     private var lastPresentedMediaID: MediaItem.ID?
+    private var selectedSortOrder: MediaSortOrder = .name
 
     var currentURL: URL? {
         session.snapshot.current?.url
@@ -124,6 +128,32 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         canvas.showActualSize()
     }
 
+    @objc func deleteCurrent(_ sender: Any?) {
+        do {
+            try session.moveCurrentToTrash()
+        } catch {
+            presentError(title: L10n.text("error.delete_failed"), error: error)
+        }
+    }
+
+    @objc func copyCurrentImage(_ sender: Any?) {
+        guard let image = try? session.renderedCurrentImage() else {
+            NSSound.beep()
+            return
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.writeObjects([NSImage(cgImage: image, size: .zero)])
+    }
+
+    @objc func setSortOrder(_ sender: Any?) {
+        guard let item = sender as? NSMenuItem,
+              let order = sortOrder(for: item.tag) else {
+            return
+        }
+        applySortOrder(order)
+    }
+
     @objc func rotateLeft(_ sender: Any?) {
         session.rotate(clockwise: false)
     }
@@ -198,6 +228,36 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     @objc func toggleInspector(_ sender: Any?) {
         inspectorController.view.isHidden.toggle()
         splitView.adjustSubviews()
+    }
+
+    @objc func showCurrentInFinder(_ sender: Any?) {
+        guard let url = window?.representedURL else {
+            return
+        }
+        NSWorkspace.shared.activateFileViewerSelecting([url])
+    }
+
+    @objc func openCurrentInDefaultApp(_ sender: Any?) {
+        guard let url = session.snapshot.current?.url else {
+            return
+        }
+        NSWorkspace.shared.open(url)
+    }
+
+    @objc func setFinderLabel(_ sender: Any?) {
+        guard let item = sender as? NSMenuItem,
+              (0...7).contains(item.tag),
+              var url = session.snapshot.current?.url else {
+            return
+        }
+        var values = URLResourceValues()
+        values.labelNumber = item.tag
+        do {
+            try url.setResourceValues(values)
+            session.refreshCurrentFolder()
+        } catch {
+            presentError(title: L10n.text("menu.finder_label"), error: error)
+        }
     }
 
     @objc func pinCurrentImage(_ sender: Any?) {
@@ -325,9 +385,10 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.fit,
             ToolbarID.previousPage, ToolbarID.nextPage, ToolbarID.slideshow,
             ToolbarID.actual, ToolbarID.rotateLeft, ToolbarID.rotateRight,
-            ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop, ToolbarID.flexible,
+            ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop, ToolbarID.delete,
+            ToolbarID.flexible,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
-            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr, ToolbarID.subject,
+            ToolbarID.ocr,
         ]
     }
 
@@ -337,8 +398,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             ToolbarID.previousPage, ToolbarID.nextPage, ToolbarID.slideshow,
             ToolbarID.fit, ToolbarID.actual, ToolbarID.rotateLeft,
             ToolbarID.rotateRight, ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop,
+            ToolbarID.delete,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
-            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr, ToolbarID.subject,
+            ToolbarID.ocr,
         ]
     }
 
@@ -374,22 +436,17 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.flip_vertical"), symbol: "arrow.up.and.down.righttriangle.up.righttriangle.down", action: #selector(flipVertical(_:)))
         case ToolbarID.crop:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.crop"), symbol: "crop", action: #selector(beginCrop(_:)))
+        case ToolbarID.delete:
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.delete"), symbol: "trash", action: #selector(deleteCurrent(_:)))
         case ToolbarID.grid:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.grid"), symbol: "square.grid.3x3", action: #selector(toggleGrid(_:)))
         case ToolbarID.thumbnails:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.thumbnails"), symbol: "rectangle.bottomthird.inset.filled", action: #selector(toggleThumbnails(_:)))
         case ToolbarID.inspector:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.info"), symbol: "info.circle", action: #selector(toggleInspector(_:)))
-        case ToolbarID.pin:
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.pin"), symbol: "pin", action: #selector(pinCurrentImage(_:)))
-        case ToolbarID.pastePin:
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.pin_clipboard"), symbol: "doc.on.clipboard", action: #selector(pinClipboard(_:)))
         case ToolbarID.ocr:
             guard SystemCapabilities.ocrAvailable else { return nil }
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.ocr"), symbol: "text.viewfinder", action: #selector(performOCR(_:)))
-        case ToolbarID.subject:
-            guard SystemCapabilities.subjectExtractionAvailable else { return nil }
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.subject"), symbol: "person.crop.rectangle", action: #selector(extractSubject(_:)))
         default:
             return nil
         }
@@ -416,6 +473,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
                 view.bottomAnchor.constraint(equalTo: contentArea.bottomAnchor),
             ])
         }
+        canvas.menu = makeContextMenu()
         gridController.view.isHidden = true
 
         thumbnailStrip.translatesAutoresizingMaskIntoConstraints = false
@@ -466,10 +524,10 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             self?.canvas.isHidden = false
         }
         gridController.onSortChanged = { [weak self] order in
-            self?.session.setSortOrder(order)
+            self?.applySortOrder(order)
         }
-        inspectorController.onTrash = { [weak self] in
-            self?.session.refreshCurrentFolder()
+        inspectorController.onDeleteRequested = { [weak self] in
+            self?.deleteCurrent(nil)
         }
         session.onChange = { [weak self] snapshot in
             self?.apply(snapshot)
@@ -528,6 +586,237 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         item.target = self
         item.action = action
         return item
+    }
+
+    private func makeContextMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("menu.recognize_text"),
+                action: #selector(performOCR(_:))
+            )
+        )
+        menu.addItem(.separator())
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("menu.actual"),
+                action: #selector(showActualSize(_:))
+            )
+        )
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("menu.fit"),
+                action: #selector(fitToWindow(_:))
+            )
+        )
+        menu.addItem(.separator())
+
+        let sortMenu = NSMenu(title: L10n.text("menu.sort"))
+        for tag in 0...6 {
+            let item = contextMenuItem(
+                sortTitle(for: tag),
+                action: #selector(setSortOrder(_:))
+            )
+            item.tag = tag
+            sortMenu.addItem(item)
+        }
+        let sortItem = NSMenuItem(
+            title: L10n.text("menu.sort"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        sortItem.submenu = sortMenu
+        menu.addItem(sortItem)
+
+        let processingMenu = NSMenu(title: L10n.text("menu.image_processing"))
+        processingMenu.addItem(
+            contextMenuItem(
+                L10n.text("toolbar.rotate_left"),
+                action: #selector(rotateLeft(_:))
+            )
+        )
+        processingMenu.addItem(
+            contextMenuItem(
+                L10n.text("toolbar.rotate_right"),
+                action: #selector(rotateRight(_:))
+            )
+        )
+        processingMenu.addItem(
+            contextMenuItem(
+                L10n.text("toolbar.flip"),
+                action: #selector(flipHorizontal(_:))
+            )
+        )
+        processingMenu.addItem(
+            contextMenuItem(
+                L10n.text("toolbar.flip_vertical"),
+                action: #selector(flipVertical(_:))
+            )
+        )
+        processingMenu.addItem(.separator())
+        processingMenu.addItem(
+            contextMenuItem(
+                L10n.text("toolbar.crop"),
+                action: #selector(beginCrop(_:))
+            )
+        )
+        let processingItem = NSMenuItem(
+            title: L10n.text("menu.image_processing"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        processingItem.submenu = processingMenu
+        menu.addItem(processingItem)
+
+        let labelMenu = NSMenu(title: L10n.text("menu.finder_label"))
+        for tag in 0...7 {
+            let item = contextMenuItem(
+                finderLabelTitle(for: tag),
+                action: #selector(setFinderLabel(_:))
+            )
+            item.tag = tag
+            labelMenu.addItem(item)
+        }
+        let labelItem = NSMenuItem(
+            title: L10n.text("menu.finder_label"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        labelItem.submenu = labelMenu
+        menu.addItem(labelItem)
+        menu.addItem(.separator())
+
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("menu.pin_desktop"),
+                action: #selector(pinCurrentImage(_:))
+            )
+        )
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("inspector.show_finder"),
+                action: #selector(showCurrentInFinder(_:))
+            )
+        )
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("inspector.open_default"),
+                action: #selector(openCurrentInDefaultApp(_:))
+            )
+        )
+        menu.addItem(.separator())
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("menu.copy"),
+                action: #selector(copyCurrentImage(_:))
+            )
+        )
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("menu.delete"),
+                action: #selector(deleteCurrent(_:))
+            )
+        )
+        return menu
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(setSortOrder(_:)) {
+            menuItem.state = menuItem.tag == sortTag(for: selectedSortOrder)
+                ? .on
+                : .off
+            return true
+        }
+        if menuItem.action == #selector(setFinderLabel(_:)) {
+            menuItem.state = menuItem.tag == (session.snapshot.current?.finderLabel ?? 0)
+                ? .on
+                : .off
+        }
+
+        let currentImageActions: [Selector] = [
+            #selector(performOCR(_:)),
+            #selector(showActualSize(_:)),
+            #selector(fitToWindow(_:)),
+            #selector(rotateLeft(_:)),
+            #selector(rotateRight(_:)),
+            #selector(flipHorizontal(_:)),
+            #selector(flipVertical(_:)),
+            #selector(beginCrop(_:)),
+            #selector(setFinderLabel(_:)),
+            #selector(pinCurrentImage(_:)),
+            #selector(showCurrentInFinder(_:)),
+            #selector(openCurrentInDefaultApp(_:)),
+            #selector(copyCurrentImage(_:)),
+            #selector(deleteCurrent(_:)),
+        ]
+        if let action = menuItem.action, currentImageActions.contains(action) {
+            return session.snapshot.current != nil
+        }
+        return true
+    }
+
+    private func contextMenuItem(_ title: String, action: Selector) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        return item
+    }
+
+    private func applySortOrder(_ order: MediaSortOrder) {
+        selectedSortOrder = order
+        gridController.selectSortOrder(order)
+        session.setSortOrder(order)
+    }
+
+    private func sortOrder(for tag: Int) -> MediaSortOrder? {
+        switch tag {
+        case 0: .name
+        case 1: .extension
+        case 2: .creationDate
+        case 3: .modificationDate
+        case 4: .finderOrder
+        case 5: .random
+        case 6: .finderLabel
+        default: nil
+        }
+    }
+
+    private func sortTag(for order: MediaSortOrder) -> Int {
+        switch order {
+        case .name: 0
+        case .extension: 1
+        case .creationDate: 2
+        case .modificationDate: 3
+        case .finderOrder: 4
+        case .random: 5
+        case .finderLabel: 6
+        }
+    }
+
+    private func sortTitle(for tag: Int) -> String {
+        switch tag {
+        case 0: L10n.text("sort.name")
+        case 1: L10n.text("sort.extension")
+        case 2: L10n.text("sort.creation_date")
+        case 3: L10n.text("sort.modification_date")
+        case 4: L10n.text("sort.finder_order")
+        case 5: L10n.text("sort.random")
+        case 6: L10n.text("sort.finder_label")
+        default: ""
+        }
+    }
+
+    private func finderLabelTitle(for tag: Int) -> String {
+        switch tag {
+        case 0: L10n.text("label.no_label")
+        case 1: L10n.text("label.gray")
+        case 2: L10n.text("label.green")
+        case 3: L10n.text("label.purple")
+        case 4: L10n.text("label.blue")
+        case 5: L10n.text("label.yellow")
+        case 6: L10n.text("label.red")
+        case 7: L10n.text("label.orange")
+        default: ""
+        }
     }
 
     private func finishCrop() {
