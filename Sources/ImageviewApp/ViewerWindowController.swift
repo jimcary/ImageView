@@ -472,7 +472,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         guard let source = session.snapshot.current?.url else {
             return
         }
-        let defaultFormat = exportFormat(for: source) ?? .png
+        let quality = cropPanel?.exportQuality ?? 0.9
+        let metadataPolicy = cropPanel?.metadataPolicy ?? .preserve
+        let defaultFormat = exportFormat(for: source, quality: quality) ?? .png
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.jpeg, .png, .tiff, .heic]
         panel.canCreateDirectories = true
@@ -483,12 +485,12 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             return
         }
 
-        let format = exportFormat(for: destination) ?? defaultFormat
+        let format = exportFormat(for: destination, quality: quality) ?? defaultFormat
         do {
             try session.saveCurrent(
                 to: destination,
                 format: format,
-                metadataPolicy: .preserve
+                metadataPolicy: metadataPolicy
             )
             finishCrop()
         } catch {
@@ -500,7 +502,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         guard let source = session.snapshot.current?.url else {
             return
         }
-        guard let format = exportFormat(for: source) else {
+        let quality = cropPanel?.exportQuality ?? 0.9
+        let metadataPolicy = cropPanel?.metadataPolicy ?? .preserve
+        guard let format = exportFormat(for: source, quality: quality) else {
             presentMessage(
                 title: L10n.text("error.cannot_overwrite_title"),
                 message: L10n.text("error.cannot_overwrite_message")
@@ -519,7 +523,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         }
 
         do {
-            try session.overwriteCurrent(format: format, metadataPolicy: .preserve)
+            try session.overwriteCurrent(format: format, metadataPolicy: metadataPolicy)
             finishCrop()
         } catch {
             presentError(title: L10n.text("error.overwrite_failed"), error: error)
@@ -538,16 +542,16 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         cropPanel = nil
     }
 
-    private func exportFormat(for url: URL) -> ExportFormat? {
+    private func exportFormat(for url: URL, quality: Double) -> ExportFormat? {
         switch url.pathExtension.lowercased() {
         case "jpg", "jpeg":
-            .jpeg(quality: 0.9)
+            .jpeg(quality: quality)
         case "png":
             .png
         case "tif", "tiff":
             .tiff
         case "heic", "heif":
-            .heic(quality: 0.9)
+            .heic(quality: quality)
         default:
             nil
         }

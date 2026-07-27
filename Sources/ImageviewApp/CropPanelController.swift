@@ -13,11 +13,32 @@ final class CropPanelController: NSWindowController {
     private let aspectPopup = NSPopUpButton()
     private let widthField = NSTextField()
     private let heightField = NSTextField()
+    private let qualitySlider = NSSlider(
+        value: 90,
+        minValue: 1,
+        maxValue: 100,
+        target: nil,
+        action: nil
+    )
+    private let qualityValueLabel = NSTextField(labelWithString: "90%")
+    private let preserveMetadataButton = NSButton(
+        checkboxWithTitle: "",
+        target: nil,
+        action: nil
+    )
     private let aspects = CropAspect.allCases
+
+    var exportQuality: Double {
+        Double(qualityPercent) / 100
+    }
+
+    var metadataPolicy: MetadataPolicy {
+        preserveMetadataButton.state == .on ? .preserve : .remove
+    }
 
     init() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 300, height: 230),
+            contentRect: NSRect(x: 0, y: 0, width: 300, height: 300),
             styleMask: [.titled, .closable, .utilityWindow],
             backing: .buffered,
             defer: false
@@ -56,10 +77,28 @@ final class CropPanelController: NSWindowController {
             field.action = #selector(pixelSizeChanged(_:))
         }
 
+        qualitySlider.target = self
+        qualitySlider.action = #selector(qualityChanged(_:))
+        qualitySlider.isContinuous = true
+        qualitySlider.setAccessibilityLabel(L10n.text("crop.quality"))
+        qualitySlider.widthAnchor.constraint(greaterThanOrEqualToConstant: 110).isActive = true
+        qualityValueLabel.alignment = .right
+        qualityValueLabel.widthAnchor.constraint(equalToConstant: 42).isActive = true
+
+        preserveMetadataButton.title = L10n.text("crop.preserve_metadata")
+        preserveMetadataButton.state = .on
+
+        let qualityControls = NSStackView(views: [qualitySlider, qualityValueLabel])
+        qualityControls.orientation = .horizontal
+        qualityControls.alignment = .centerY
+        qualityControls.spacing = 8
+
         let form = NSGridView(views: [
             [NSTextField(labelWithString: L10n.text("crop.ratio")), aspectPopup],
             [NSTextField(labelWithString: L10n.text("crop.width")), widthField],
             [NSTextField(labelWithString: L10n.text("crop.height")), heightField],
+            [NSTextField(labelWithString: L10n.text("crop.quality")), qualityControls],
+            [NSTextField(labelWithString: ""), preserveMetadataButton],
         ])
         form.rowSpacing = 10
         form.columnSpacing = 12
@@ -134,6 +173,10 @@ final class CropPanelController: NSWindowController {
         return formatter
     }
 
+    private var qualityPercent: Int {
+        min(max(Int(qualitySlider.doubleValue.rounded()), 1), 100)
+    }
+
     private func button(_ title: String, action: Selector) -> NSButton {
         let button = NSButton(title: title, target: self, action: action)
         button.bezelStyle = .rounded
@@ -154,6 +197,11 @@ final class CropPanelController: NSWindowController {
             return
         }
         onPixelSizeChanged?(width, height)
+    }
+
+    @objc private func qualityChanged(_ sender: Any?) {
+        qualitySlider.doubleValue = Double(qualityPercent)
+        qualityValueLabel.stringValue = "\(qualityPercent)%"
     }
 
     @objc private func copyImage(_ sender: Any?) {

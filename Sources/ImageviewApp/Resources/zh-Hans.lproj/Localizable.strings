@@ -38,6 +38,8 @@
 "crop.ratio" = "比例";
 "crop.width" = "宽度";
 "crop.height" = "高度";
+"crop.quality" = "导出质量";
+"crop.preserve_metadata" = "保留元数据";
 "crop.free" = "自由";
 "crop.original" = "原始比例";
 "action.copy" = "复制";

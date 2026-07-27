@@ -38,6 +38,8 @@
 "crop.ratio" = "Ratio";
 "crop.width" = "Width";
 "crop.height" = "Height";
+"crop.quality" = "Quality";
+"crop.preserve_metadata" = "Preserve metadata";
 "crop.free" = "Free";
 "crop.original" = "Original";
 "action.copy" = "Copy";
