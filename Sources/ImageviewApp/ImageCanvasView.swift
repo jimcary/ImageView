@@ -38,17 +38,7 @@ final class ImageCanvasView: NSView {
     private struct CropDrag {
         let startPoint: CGPoint
         let startCrop: NormalizedRect?
-        let edges: CropEdges
-    }
-
-    private struct CropEdges: OptionSet {
-        let rawValue: Int
-
-        static let left = CropEdges(rawValue: 1 << 0)
-        static let right = CropEdges(rawValue: 1 << 1)
-        static let top = CropEdges(rawValue: 1 << 2)
-        static let bottom = CropEdges(rawValue: 1 << 3)
-        static let move = CropEdges(rawValue: 1 << 4)
+        let edges: CropResizeEdges
     }
 
     override var acceptsFirstResponder: Bool { true }
@@ -298,29 +288,12 @@ final class ImageCanvasView: NSView {
         )
     }
 
-    private func cropEdges(at point: CGPoint, cropRect: CGRect) -> CropEdges {
-        let hitDistance: CGFloat = 12
-        guard cropRect.insetBy(dx: -hitDistance, dy: -hitDistance).contains(point) else {
-            return []
-        }
-
-        var edges: CropEdges = []
-        if abs(point.x - cropRect.minX) <= hitDistance {
-            edges.insert(.left)
-        }
-        if abs(point.x - cropRect.maxX) <= hitDistance {
-            edges.insert(.right)
-        }
-        if abs(point.y - cropRect.minY) <= hitDistance {
-            edges.insert(.top)
-        }
-        if abs(point.y - cropRect.maxY) <= hitDistance {
-            edges.insert(.bottom)
-        }
-        if edges.isEmpty, cropRect.contains(point) {
-            edges = .move
-        }
-        return edges
+    private func cropEdges(at point: CGPoint, cropRect: CGRect) -> CropResizeEdges {
+        CropGeometry.resizeEdges(
+            at: point,
+            cropRect: cropRect,
+            hitDistance: 12
+        )
     }
 
     private func updateCropDrag(
@@ -333,53 +306,16 @@ final class ImageCanvasView: NSView {
               imageRect.height > 0 else {
             return
         }
-        let deltaX = (currentPoint.x - drag.startPoint.x) / imageRect.width
-        let deltaY = (currentPoint.y - drag.startPoint.y) / imageRect.height
-        var proposed = CGRect(
-            x: startCrop.x,
-            y: startCrop.y,
-            width: startCrop.width,
-            height: startCrop.height
+        updateCrop(
+            CropGeometry.resizedSelection(
+                startCrop,
+                from: drag.startPoint,
+                to: currentPoint,
+                imageRect: imageRect,
+                edges: drag.edges,
+                minimumSize: 0.01
+            )
         )
-
-        if drag.edges.contains(.move) {
-            proposed.origin.x += deltaX
-            proposed.origin.y += deltaY
-        } else {
-            if drag.edges.contains(.left) {
-                proposed.origin.x += deltaX
-                proposed.size.width -= deltaX
-            }
-            if drag.edges.contains(.right) {
-                proposed.size.width += deltaX
-            }
-            if drag.edges.contains(.top) {
-                proposed.origin.y += deltaY
-                proposed.size.height -= deltaY
-            }
-            if drag.edges.contains(.bottom) {
-                proposed.size.height += deltaY
-            }
-        }
-
-        updateCrop(proposed)
-    }
-
-    private func updateCrop(_ proposed: CGRect) {
-        let minimum: CGFloat = 0.01
-        var rectangle = proposed.standardized
-        rectangle.size.width = min(max(rectangle.width, minimum), 1)
-        rectangle.size.height = min(max(rectangle.height, minimum), 1)
-        rectangle.origin.x = min(max(rectangle.origin.x, 0), 1 - rectangle.width)
-        rectangle.origin.y = min(max(rectangle.origin.y, 0), 1 - rectangle.height)
-        crop = NormalizedRect(
-            x: rectangle.origin.x,
-            y: rectangle.origin.y,
-            width: rectangle.width,
-            height: rectangle.height
-        )
-        onCropChanged?(crop)
-        needsDisplay = true
     }
 
     private func updateCrop(_ crop: NormalizedRect) {

@@ -6,7 +6,8 @@ final class ViewerWindowController:
     NSWindowController,
     NSWindowDelegate,
     NSToolbarDelegate,
-    NSMenuItemValidation
+    NSMenuItemValidation,
+    NSToolbarItemValidation
 {
     var onClose: (() -> Void)?
     var onOpenURLsRequested: (([URL]) -> Void)?
@@ -40,7 +41,7 @@ final class ViewerWindowController:
     private let centerStack = NSStackView()
     private let splitView = NSSplitView()
     private let session = ViewerSession()
-    private var cropBeforeEditing = NormalizedRect.full
+    private var cropTransaction: CropTransaction?
     private var pinControllers: [PinboardWindowController] = []
     private var ocrTask: Task<Void, Never>?
     private var subjectTask: Task<Void, Never>?
@@ -50,6 +51,26 @@ final class ViewerWindowController:
 
     var currentURL: URL? {
         session.snapshot.current?.url
+    }
+
+    var hasCurrentItem: Bool {
+        session.snapshot.current != nil
+    }
+
+    var canCommitCrop: Bool {
+        guard canvas.isCropMode,
+              canvas.hasCropSelection,
+              let cropTransaction else {
+            return false
+        }
+        let snapshot = session.snapshot
+        return snapshot.subimageCount == 1
+            && cropTransaction.matches(
+                currentMediaID: snapshot.current?.id,
+                decodedMediaID: snapshot.decodedMediaID,
+                decodeGeneration: snapshot.decodeGeneration,
+                subimageIndex: snapshot.decodedSubimageIndex
+            )
     }
 
     init(urls: [URL] = []) {
@@ -117,6 +138,9 @@ final class ViewerWindowController:
     }
 
     @objc func toggleSlideshow(_ sender: Any?) {
+        if canvas.isCropMode {
+            cancelCrop(nil)
+        }
         session.toggleSlideshow()
     }
 
@@ -175,17 +199,35 @@ final class ViewerWindowController:
             window?.makeFirstResponder(canvas)
             return
         }
-        guard session.snapshot.image != nil else {
+        let snapshot = session.snapshot
+        guard let current = snapshot.current,
+              snapshot.image != nil,
+              let decodeGeneration = snapshot.decodeGeneration,
+              snapshot.decodedMediaID == current.id,
+              let decodedSubimageIndex = snapshot.decodedSubimageIndex else {
             NSSound.beep()
             return
         }
+        guard snapshot.subimageCount == 1 else {
+            presentMessage(
+                title: L10n.text("error.cannot_overwrite_title"),
+                message: L10n.text("error.cannot_overwrite_message")
+            )
+            return
+        }
 
-        cropBeforeEditing = session.snapshot.recipe.crop
+        cropTransaction = CropTransaction(
+            mediaID: current.id,
+            decodeGeneration: decodeGeneration,
+            subimageIndex: decodedSubimageIndex,
+            originalRecipe: snapshot.recipe
+        )
         canvas.beginCrop()
     }
 
     @objc func commitCropAndOverwrite(_ sender: Any?) {
-        guard canvas.isCropMode, canvas.hasCropSelection,
+        guard canCommitCrop,
+              let cropTransaction,
               let source = session.snapshot.current?.url else {
             NSSound.beep()
             return
@@ -199,7 +241,11 @@ final class ViewerWindowController:
         }
 
         do {
-            try session.overwriteCurrent(format: format, metadataPolicy: .preserve)
+            try session.overwriteCurrent(
+                transaction: cropTransaction,
+                format: format,
+                metadataPolicy: .preserve
+            )
             finishCrop()
         } catch {
             presentError(title: L10n.text("error.overwrite_failed"), error: error)
@@ -210,7 +256,9 @@ final class ViewerWindowController:
         guard canvas.isCropMode else {
             return
         }
-        session.setCrop(cropBeforeEditing)
+        if let cropTransaction {
+            session.setRecipe(cropTransaction.originalRecipe)
+        }
         finishCrop()
     }
 
@@ -256,6 +304,11 @@ final class ViewerWindowController:
         do {
             try session.setFinderLabel(labelNumber)
         } catch {
+            let snapshot = session.snapshot
+            inspectorController.update(
+                item: snapshot.current,
+                properties: snapshot.sourceProperties
+            )
             presentError(title: L10n.text("menu.finder_label"), error: error)
         }
     }
@@ -452,6 +505,13 @@ final class ViewerWindowController:
         }
     }
 
+    func validateToolbarItem(_ item: NSToolbarItem) -> Bool {
+        if item.itemIdentifier == ToolbarID.delete {
+            return session.snapshot.current != nil
+        }
+        return true
+    }
+
     private func configureToolbar(for window: NSWindow) {
         let toolbar = NSToolbar(identifier: ToolbarID.toolbar)
         toolbar.delegate = self
@@ -542,6 +602,15 @@ final class ViewerWindowController:
     }
 
     private func apply(_ snapshot: ViewerSession.Snapshot) {
+        if canvas.isCropMode,
+           cropTransaction?.matches(
+               currentMediaID: snapshot.current?.id,
+               decodedMediaID: snapshot.decodedMediaID,
+               decodeGeneration: snapshot.decodeGeneration,
+               subimageIndex: snapshot.decodedSubimageIndex
+           ) != true {
+            finishCrop()
+        }
         let mediaID = snapshot.current?.id
         canvas.present(
             snapshot.image,
@@ -573,6 +642,7 @@ final class ViewerWindowController:
             window?.title = "Imageview"
             window?.representedURL = nil
         }
+        window?.toolbar?.validateVisibleItems()
     }
 
     private func toolbarItem(
@@ -825,6 +895,7 @@ final class ViewerWindowController:
 
     private func finishCrop() {
         canvas.endCrop()
+        cropTransaction = nil
     }
 
     private func exportFormat(for url: URL, quality: Double) -> ExportFormat? {
@@ -835,8 +906,10 @@ final class ViewerWindowController:
             .png
         case "tif", "tiff":
             .tiff
-        case "heic", "heif":
+        case "heic":
             .heic(quality: quality)
+        case "heif":
+            .heif(quality: quality)
         default:
             nil
         }

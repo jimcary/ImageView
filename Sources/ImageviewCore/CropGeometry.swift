@@ -1,5 +1,19 @@
 import CoreGraphics
 
+public struct CropResizeEdges: OptionSet, Equatable, Sendable {
+    public let rawValue: Int
+
+    public static let left = CropResizeEdges(rawValue: 1 << 0)
+    public static let right = CropResizeEdges(rawValue: 1 << 1)
+    public static let top = CropResizeEdges(rawValue: 1 << 2)
+    public static let bottom = CropResizeEdges(rawValue: 1 << 3)
+    public static let move = CropResizeEdges(rawValue: 1 << 4)
+
+    public init(rawValue: Int) {
+        self.rawValue = rawValue
+    }
+}
+
 public enum CropAspect: String, CaseIterable, Sendable {
     case free
     case original
@@ -117,5 +131,84 @@ public struct CropGeometry: Sendable {
         origin.x = min(max(origin.x, bounds.minX), bounds.maxX - size.width)
         origin.y = min(max(origin.y, bounds.minY), bounds.maxY - size.height)
         return CGRect(origin: origin, size: size)
+    }
+
+    public static func resizeEdges(
+        at point: CGPoint,
+        cropRect: CGRect,
+        hitDistance: CGFloat
+    ) -> CropResizeEdges {
+        guard cropRect.insetBy(dx: -hitDistance, dy: -hitDistance).contains(point) else {
+            return []
+        }
+
+        var edges: CropResizeEdges = []
+        let horizontal = [
+            (CropResizeEdges.left, abs(point.x - cropRect.minX)),
+            (.right, abs(point.x - cropRect.maxX)),
+        ].filter { $0.1 <= hitDistance }.min { $0.1 < $1.1 }
+        let vertical = [
+            (CropResizeEdges.top, abs(point.y - cropRect.minY)),
+            (.bottom, abs(point.y - cropRect.maxY)),
+        ].filter { $0.1 <= hitDistance }.min { $0.1 < $1.1 }
+
+        if let horizontal {
+            edges.insert(horizontal.0)
+        }
+        if let vertical {
+            edges.insert(vertical.0)
+        }
+        if edges.isEmpty, cropRect.contains(point) {
+            edges.insert(.move)
+        }
+        return edges
+    }
+
+    public static func resizedSelection(
+        _ original: NormalizedRect,
+        from startPoint: CGPoint,
+        to currentPoint: CGPoint,
+        imageRect: CGRect,
+        edges: CropResizeEdges,
+        minimumSize: CGFloat
+    ) -> NormalizedRect {
+        guard imageRect.width > 0, imageRect.height > 0 else {
+            return original
+        }
+
+        let deltaX = (currentPoint.x - startPoint.x) / imageRect.width
+        let deltaY = (currentPoint.y - startPoint.y) / imageRect.height
+        let minimum = min(max(minimumSize, 0), 1)
+        var minX = original.x
+        var maxX = original.x + original.width
+        var minY = original.y
+        var maxY = original.y + original.height
+
+        if edges.contains(.move) {
+            minX = min(max(minX + deltaX, 0), 1 - original.width)
+            minY = min(max(minY + deltaY, 0), 1 - original.height)
+            maxX = minX + original.width
+            maxY = minY + original.height
+        } else {
+            if edges.contains(.left) {
+                minX = min(max(minX + deltaX, 0), maxX - minimum)
+            }
+            if edges.contains(.right) {
+                maxX = max(min(maxX + deltaX, 1), minX + minimum)
+            }
+            if edges.contains(.top) {
+                minY = min(max(minY + deltaY, 0), maxY - minimum)
+            }
+            if edges.contains(.bottom) {
+                maxY = max(min(maxY + deltaY, 1), minY + minimum)
+            }
+        }
+
+        return NormalizedRect(
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        )
     }
 }

@@ -31,7 +31,11 @@ public struct FolderScanner: Sendable {
             )
         }
 
-        return urls.enumerated().compactMap { finderOrder, url in
+        return scan(urls: urls)
+    }
+
+    public func scan(urls: [URL]) -> [MediaItem] {
+        urls.enumerated().compactMap { finderOrder, url in
             guard MediaTypeRegistry.isSupported(url: url) else {
                 return nil
             }

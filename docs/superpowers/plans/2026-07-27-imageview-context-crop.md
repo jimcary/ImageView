@@ -36,7 +36,7 @@
 - Produces: `MediaIndex.removeCurrent() -> MediaItem?`
 - Produces: `ShortcutCommand.delete`
 - Produces: crop default `Shortcut(command: .crop, key: "k", modifiers: [.command])`
-- Produces: delete default `Shortcut(command: .delete, key: "\u{8}", modifiers: [])`
+- Produces: delete default `Shortcut(command: .delete, key: "\u{7F}", modifiers: [])`
 - Consumes: existing `MediaIndex.current`, `Shortcut`, and shortcut persistence validation.
 
 - [ ] **Step 1: Add failing removal-selection tests**
@@ -79,7 +79,7 @@ func cropAndDeleteUseTheRequestedDefaultShortcuts() {
     )
     #expect(
         AppPreferences.defaultShortcut(for: .delete)
-            == Shortcut(command: .delete, key: "\u{8}", modifiers: [])
+            == Shortcut(command: .delete, key: "\u{7F}", modifiers: [])
     )
 }
 ```
@@ -113,7 +113,7 @@ public mutating func removeCurrent() -> MediaItem? {
 }
 ```
 
-Map `"\u{8}"` to the visible key `⌫` and back in `PreferencesWindowController`. Add `shortcut.delete` in both localization files and update the shortcut summary text to show `⌘K` and `⌫`.
+Map `"\u{7F}"` to the visible key `⌫` and back in `PreferencesWindowController`. Add `shortcut.delete` in both localization files and update the shortcut summary text to show `⌘K` and `⌫`.
 
 - [ ] **Step 5: Run focused and full core tests**
 

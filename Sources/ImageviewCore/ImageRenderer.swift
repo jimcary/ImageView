@@ -12,16 +12,7 @@ public struct ImageRenderer {
     public init() {}
 
     public func render(_ source: CGImage, recipe: EditRecipe) throws -> CGImage {
-        let cropRect = CropGeometry(crop: recipe.crop)
-            .pixelRect(imageSize: CGSize(width: source.width, height: source.height))
-        guard cropRect.width >= 1, cropRect.height >= 1 else {
-            throw ImageRenderError.emptyCrop
-        }
-        guard let cropped = source.cropping(to: cropRect) else {
-            throw ImageRenderError.cropFailed
-        }
-
-        var output = CIImage(cgImage: cropped)
+        var output = CIImage(cgImage: source)
         if recipe.flipHorizontal {
             output = output.oriented(.upMirrored)
         }
@@ -42,14 +33,26 @@ public struct ImageRenderer {
         }
         output = output.oriented(orientation)
 
-        let extent = output.extent.integral
+        let transformedExtent = output.extent.integral
         let normalized = output.transformed(
-            by: CGAffineTransform(translationX: -extent.minX, y: -extent.minY)
+            by: CGAffineTransform(
+                translationX: -transformedExtent.minX,
+                y: -transformedExtent.minY
+            )
         )
-        guard let rendered = CIContext(options: [.cacheIntermediates: false])
+        guard let transformed = CIContext(options: [.cacheIntermediates: false])
             .createCGImage(normalized, from: normalized.extent.integral) else {
             throw ImageRenderError.renderFailed
         }
-        return rendered
+
+        let cropRect = CropGeometry(crop: recipe.crop)
+            .pixelRect(imageSize: CGSize(width: transformed.width, height: transformed.height))
+        guard cropRect.width >= 1, cropRect.height >= 1 else {
+            throw ImageRenderError.emptyCrop
+        }
+        guard let cropped = transformed.cropping(to: cropRect) else {
+            throw ImageRenderError.cropFailed
+        }
+        return cropped
     }
 }

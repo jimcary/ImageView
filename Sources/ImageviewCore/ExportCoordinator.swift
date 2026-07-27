@@ -8,6 +8,7 @@ public enum ExportFormat: Equatable, Sendable {
     case png
     case tiff
     case heic(quality: Double)
+    case heif(quality: Double)
 
     public var fileExtension: String {
         switch self {
@@ -19,6 +20,8 @@ public enum ExportFormat: Equatable, Sendable {
             "tiff"
         case .heic:
             "heic"
+        case .heif:
+            "heif"
         }
     }
 
@@ -32,12 +35,14 @@ public enum ExportFormat: Equatable, Sendable {
             UTType.tiff.identifier as CFString
         case .heic:
             UTType.heic.identifier as CFString
+        case .heif:
+            UTType.heif.identifier as CFString
         }
     }
 
     var quality: Double? {
         switch self {
-        case let .jpeg(quality), let .heic(quality):
+        case let .jpeg(quality), let .heic(quality), let .heif(quality):
             min(max(quality, 0), 1)
         case .png, .tiff:
             nil
@@ -55,18 +60,30 @@ public enum ExportError: Error, Equatable {
     case cannotCreateDestination
     case finalizeFailed
     case validationFailed
+    case multiImageSourceUnsupported
 }
 
 public struct ExportCoordinator {
     private let fileManager: FileManager
-    private let validator: (URL) -> Bool
+    private let validator: (URL, CGSize) -> Bool
+    private let replacement: (FileManager, URL, URL) throws -> Void
 
     public init(
         fileManager: FileManager = .default,
-        validator: @escaping (URL) -> Bool = ExportCoordinator.defaultValidator
+        validator: @escaping (URL, CGSize) -> Bool = ExportCoordinator.defaultValidator,
+        replacement: @escaping (FileManager, URL, URL) throws -> Void = {
+            fileManager, originalURL, temporaryURL in
+            _ = try fileManager.replaceItemAt(
+                originalURL,
+                withItemAt: temporaryURL,
+                backupItemName: nil,
+                options: []
+            )
+        }
     ) {
         self.fileManager = fileManager
         self.validator = validator
+        self.replacement = replacement
     }
 
     public func saveAs(
@@ -111,15 +128,25 @@ public struct ExportCoordinator {
             format: format,
             metadataPolicy: metadataPolicy
         )
+        let backupURL = siblingBackupURL(for: originalURL)
 
         do {
-            _ = try fileManager.replaceItemAt(
-                originalURL,
-                withItemAt: temporaryURL,
-                backupItemName: nil,
-                options: []
-            )
+            try fileManager.copyItem(at: originalURL, to: backupURL)
+            try replacement(fileManager, originalURL, temporaryURL)
+            try? fileManager.removeItem(at: backupURL)
         } catch {
+            if fileManager.fileExists(atPath: backupURL.path) {
+                if fileManager.fileExists(atPath: originalURL.path) {
+                    try? fileManager.removeItem(at: originalURL)
+                }
+                do {
+                    try fileManager.copyItem(at: backupURL, to: originalURL)
+                    try? fileManager.removeItem(at: backupURL)
+                } catch {
+                    try? fileManager.removeItem(at: temporaryURL)
+                    throw error
+                }
+            }
             try? fileManager.removeItem(at: temporaryURL)
             throw error
         }
@@ -163,7 +190,10 @@ public struct ExportCoordinator {
         guard CGImageDestinationFinalize(destination) else {
             throw ExportError.finalizeFailed
         }
-        guard validator(temporaryURL) else {
+        guard validator(
+            temporaryURL,
+            CGSize(width: image.width, height: image.height)
+        ) else {
             throw ExportError.validationFailed
         }
         shouldRemoveTemporaryFile = false
@@ -175,15 +205,26 @@ public struct ExportCoordinator {
         )
     }
 
-    public static func defaultValidator(url: URL) -> Bool {
+    private func siblingBackupURL(for destination: URL) -> URL {
+        destination.deletingLastPathComponent().appendingPathComponent(
+            ".\(destination.lastPathComponent).imageview-backup-\(UUID().uuidString)"
+        )
+    }
+
+    public static func defaultValidator(
+        url: URL,
+        expectedPixelSize: CGSize
+    ) -> Bool {
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              CGImageSourceGetCount(source) > 0,
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil)
-                as? [CFString: Any],
-              let width = properties[kCGImagePropertyPixelWidth] as? NSNumber,
-              let height = properties[kCGImagePropertyPixelHeight] as? NSNumber else {
+              CGImageSourceGetCount(source) == 1,
+              let image = CGImageSourceCreateImageAtIndex(
+                source,
+                0,
+                [kCGImageSourceShouldCacheImmediately: true] as CFDictionary
+              ) else {
             return false
         }
-        return width.intValue > 0 && height.intValue > 0
+        return image.width == Int(expectedPixelSize.width)
+            && image.height == Int(expectedPixelSize.height)
     }
 }

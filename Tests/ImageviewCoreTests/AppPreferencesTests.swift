@@ -25,7 +25,7 @@ func cropAndDeleteUseTheRequestedDefaultShortcuts() {
     )
     #expect(
         AppPreferences.defaultShortcut(for: .delete)
-            == Shortcut(command: .delete, key: "\u{8}", modifiers: [])
+            == Shortcut(command: .delete, key: "\u{7F}", modifiers: [])
     )
 }
 

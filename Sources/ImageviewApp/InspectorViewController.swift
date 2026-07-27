@@ -8,6 +8,10 @@ final class InspectorViewController: NSViewController {
 
     private let textView = NSTextView()
     private let labelPopup = NSPopUpButton()
+    private lazy var trashButton = button(
+        L10n.text("inspector.trash"),
+        action: #selector(moveToTrash(_:))
+    )
     private var item: MediaItem?
 
     override func loadView() {
@@ -22,15 +26,16 @@ final class InspectorViewController: NSViewController {
         ])
         labelPopup.target = self
         labelPopup.action = #selector(labelChanged(_:))
+        labelPopup.setAccessibilityIdentifier("finderLabelPopup")
 
         let reveal = button(L10n.text("inspector.show_finder"), action: #selector(revealInFinder(_:)))
         let copyPath = button(L10n.text("inspector.copy_path"), action: #selector(copyPath(_:)))
         let openDefault = button(L10n.text("inspector.open_default"), action: #selector(openInDefaultApp(_:)))
-        let trash = button(L10n.text("inspector.trash"), action: #selector(moveToTrash(_:)))
+        trashButton.setAccessibilityIdentifier("inspectorTrashButton")
 
         let buttonGrid = NSGridView(views: [
             [reveal, copyPath],
-            [openDefault, trash],
+            [openDefault, trashButton],
         ])
         buttonGrid.rowSpacing = 6
         buttonGrid.columnSpacing = 6
@@ -76,6 +81,8 @@ final class InspectorViewController: NSViewController {
     func update(item: MediaItem?, properties: [CFString: Any]?) {
         self.item = item
         labelPopup.selectItem(at: max(min(item?.finderLabel ?? 0, 7), 0))
+        labelPopup.isEnabled = item != nil
+        trashButton.isEnabled = item != nil
 
         guard let item else {
             textView.string = ""

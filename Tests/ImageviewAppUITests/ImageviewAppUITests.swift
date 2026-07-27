@@ -76,9 +76,27 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertTrue(waitForFileRemoval(at: redURL))
         XCTAssertTrue(app.windows["blue.jpg · 1 / 1"].waitForExistence(timeout: 5))
 
+        app.toolbars.buttons["Info"].click()
         app.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
         XCTAssertTrue(waitForFileRemoval(at: blueURL))
         XCTAssertTrue(app.windows["Imageview"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.toolbars.buttons["Delete"].isEnabled)
+        XCTAssertFalse(app.buttons["inspectorTrashButton"].isEnabled)
+        XCTAssertFalse(app.popUpButtons["finderLabelPopup"].isEnabled)
+    }
+
+    func testDeleteMenuDoesNotTargetLastViewerWhilePreferencesIsKey() {
+        let blueURL = fixturesURL.appendingPathComponent("blue.jpg")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: blueURL.path))
+
+        app.typeKey(",", modifierFlags: .command)
+        XCTAssertTrue(app.windows["Preferences"].waitForExistence(timeout: 5))
+        app.menuBars.menuBarItems["Edit"].click()
+        XCTAssertFalse(app.menuItems["Delete"].isEnabled)
+        app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
+        app.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+
+        XCTAssertTrue(FileManager.default.fileExists(atPath: blueURL.path))
     }
 
     func testImageCanvasContextMenuUsesSupportedActions() {
@@ -177,6 +195,25 @@ final class ImageviewAppUITests: XCTestCase {
         let pin = app.windows["Image Pin"]
         XCTAssertTrue(pin.waitForExistence(timeout: 5))
         XCTAssertGreaterThan(pin.frame.width, 500)
+    }
+
+    func testEscapeRestoresRotationAndFlipRecipeFromBeforeCrop() {
+        let canvas = app.otherElements["imageCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        app.toolbars.buttons["Rotate Right"].click()
+        app.toolbars.buttons["Crop"].click()
+        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.2, dy: 0.2))
+        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.8))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        app.toolbars.buttons["Rotate Left"].click()
+        app.toolbars.buttons["Flip Horizontal"].click()
+        app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
+        canvas.rightClick()
+        app.menuItems["Pin to Desktop"].click()
+
+        let pin = app.windows["Image Pin"]
+        XCTAssertTrue(pin.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(pin.frame.height, pin.frame.width)
     }
 
     func testPinCreatesFloatingImageWindow() {
@@ -284,10 +321,15 @@ final class ImageviewAppUITests: XCTestCase {
     }
 
     private func configuredAppURL() throws -> URL {
-        guard let path = ProcessInfo.processInfo.environment["IMAGEVIEW_APP_PATH"],
-              !path.isEmpty else {
-            throw XCTSkip("IMAGEVIEW_APP_PATH must point to dist/Imageview.app")
-        }
+        let configuredPath = ProcessInfo.processInfo.environment["IMAGEVIEW_APP_PATH"]
+            .flatMap { $0.isEmpty ? nil : $0 }
+        let repositoryPath = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("dist/Imageview.app", isDirectory: true)
+            .path
+        let path = configuredPath ?? repositoryPath
         let url = URL(fileURLWithPath: path, isDirectory: true)
         guard FileManager.default.fileExists(atPath: url.path) else {
             throw XCTSkip("Imageview app is not built at \(url.path)")

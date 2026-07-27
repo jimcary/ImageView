@@ -36,3 +36,34 @@ public struct EditRecipe: Equatable, Hashable, Sendable {
         self.crop = crop
     }
 }
+
+public struct CropTransaction: Equatable, Sendable {
+    public let mediaID: MediaItem.ID
+    public let decodeGeneration: UInt64
+    public let subimageIndex: Int
+    public let originalRecipe: EditRecipe
+
+    public init(
+        mediaID: MediaItem.ID,
+        decodeGeneration: UInt64,
+        subimageIndex: Int,
+        originalRecipe: EditRecipe
+    ) {
+        self.mediaID = mediaID
+        self.decodeGeneration = decodeGeneration
+        self.subimageIndex = subimageIndex
+        self.originalRecipe = originalRecipe
+    }
+
+    public func matches(
+        currentMediaID: MediaItem.ID?,
+        decodedMediaID: MediaItem.ID?,
+        decodeGeneration: UInt64?,
+        subimageIndex: Int?
+    ) -> Bool {
+        currentMediaID == mediaID
+            && decodedMediaID == mediaID
+            && decodeGeneration == self.decodeGeneration
+            && subimageIndex == self.subimageIndex
+    }
+}

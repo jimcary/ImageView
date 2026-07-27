@@ -29,6 +29,27 @@ func scannerDoesNotDescendWhenRecursiveIsFalse() throws {
     #expect(result.isEmpty)
 }
 
+@Test
+func explicitURLScanLoadsFinderMetadataAndPreservesInputOrder() throws {
+    let folder = try makeTemporaryFolder()
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let second = folder.appendingPathComponent("second.png")
+    let first = folder.appendingPathComponent("first.png")
+    try Data().write(to: first)
+    try Data().write(to: second)
+    var labeledURL = second
+    var values = URLResourceValues()
+    values.labelNumber = 3
+    try labeledURL.setResourceValues(values)
+
+    let result = FolderScanner().scan(urls: [second, first])
+
+    #expect(result.map(\.url.lastPathComponent) == ["second.png", "first.png"])
+    #expect(result.map(\.finderOrder) == [0, 1])
+    #expect(result[0].finderLabel == 3)
+    #expect(result.allSatisfy { !$0.resourceIdentifier.isEmpty })
+}
+
 private func makeTemporaryFolder() throws -> URL {
     let url = FileManager.default.temporaryDirectory
         .appendingPathComponent("ImageviewTests-\(UUID().uuidString)", isDirectory: true)

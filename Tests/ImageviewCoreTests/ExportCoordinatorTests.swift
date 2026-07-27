@@ -28,9 +28,34 @@ func failedOverwriteLeavesOriginalBytesUntouched() throws {
     defer { try? FileManager.default.removeItem(at: original) }
     let originalBytes = try Data(contentsOf: original)
     let image = try TestImageFixtures.image(width: 10, height: 10)
-    let coordinator = ExportCoordinator(validator: { _ in false })
+    let coordinator = ExportCoordinator(validator: { _, _ in false })
 
     #expect(throws: ExportError.validationFailed) {
+        try coordinator.overwrite(
+            image: image,
+            sourceProperties: nil,
+            originalURL: original,
+            format: .png,
+            metadataPolicy: .remove
+        )
+    }
+    #expect(try Data(contentsOf: original) == originalBytes)
+}
+
+@Test
+func failedReplacementAfterOriginalDisappearsRestoresOriginalBytes() throws {
+    let original = try TestImageFixtures.writePNG(width: 30, height: 20)
+    defer { try? FileManager.default.removeItem(at: original) }
+    let originalBytes = try Data(contentsOf: original)
+    let image = try TestImageFixtures.image(width: 10, height: 10)
+    let coordinator = ExportCoordinator(
+        replacement: { fileManager, originalURL, _ in
+            try fileManager.removeItem(at: originalURL)
+            throw CocoaError(.fileWriteUnknown)
+        }
+    )
+
+    #expect(throws: CocoaError.self) {
         try coordinator.overwrite(
             image: image,
             sourceProperties: nil,
@@ -61,4 +86,42 @@ func saveAsProducesAReopenableImage() throws {
 
     let decoded = try ImageDecoder().decode(url: output)
     #expect(decoded.pixelSize == CGSize(width: 45, height: 25))
+}
+
+@Test
+func defaultValidatorDecodesPixelsAndChecksExpectedDimensions() throws {
+    let imageURL = try TestImageFixtures.writePNG(width: 45, height: 25)
+    let corruptURL = FileManager.default.temporaryDirectory
+        .appendingPathComponent("ImageviewCorrupt-\(UUID().uuidString).png")
+    defer {
+        try? FileManager.default.removeItem(at: imageURL)
+        try? FileManager.default.removeItem(at: corruptURL)
+    }
+    try Data("not pixels".utf8).write(to: corruptURL)
+
+    #expect(
+        ExportCoordinator.defaultValidator(
+            url: imageURL,
+            expectedPixelSize: CGSize(width: 45, height: 25)
+        )
+    )
+    #expect(
+        !ExportCoordinator.defaultValidator(
+            url: imageURL,
+            expectedPixelSize: CGSize(width: 44, height: 25)
+        )
+    )
+    #expect(
+        !ExportCoordinator.defaultValidator(
+            url: corruptURL,
+            expectedPixelSize: CGSize(width: 45, height: 25)
+        )
+    )
+}
+
+@Test
+func heifExportUsesTheHEIFTypeIdentifier() {
+    #expect(ExportFormat.heif(quality: 0.9).fileExtension == "heif")
+    #expect(ExportFormat.heif(quality: 0.9).typeIdentifier as String == "public.heif")
+    #expect(ExportFormat.heic(quality: 0.9).typeIdentifier as String == "public.heic")
 }

@@ -92,7 +92,7 @@ public enum AppPreferences {
         case .previous: Shortcut(command: command, key: "\u{F702}", modifiers: [])
         case .next: Shortcut(command: command, key: "\u{F703}", modifiers: [])
         case .crop: Shortcut(command: command, key: "k", modifiers: [.command])
-        case .delete: Shortcut(command: command, key: "\u{8}", modifiers: [])
+        case .delete: Shortcut(command: command, key: "\u{7F}", modifiers: [])
         case .grid: Shortcut(command: command, key: "g", modifiers: [])
         case .inspector: Shortcut(command: command, key: "i", modifiers: [])
         case .pin: Shortcut(command: command, key: "p", modifiers: [])

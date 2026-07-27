@@ -44,6 +44,9 @@ public struct CropSaveWorkflow {
         metadataPolicy: MetadataPolicy
     ) throws {
         let decoded = try decoder.decode(url: sourceURL)
+        guard decoded.frameCount == 1 else {
+            throw ExportError.multiImageSourceUnsupported
+        }
         let rendered = try renderer.render(decoded.image, recipe: recipe)
         try exporter.overwrite(
             image: rendered,

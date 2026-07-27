@@ -9,6 +9,9 @@ final class ViewerSession {
         let position: Int?
         let image: CGImage?
         let sourceProperties: [CFString: Any]?
+        let decodedMediaID: MediaItem.ID?
+        let decodeGeneration: UInt64?
+        let decodedSubimageIndex: Int?
         let recipe: EditRecipe
         let playbackKind: MediaPlaybackKind
         let subimageIndex: Int
@@ -25,6 +28,8 @@ final class ViewerSession {
     private let preferences: PreferencesStore
     private let securityScopedAccess = SecurityScopedAccessSession()
     private var sourceImage: DecodedImage?
+    private var decodedMediaID: MediaItem.ID?
+    private var acceptedDecodeGeneration: UInt64?
     private var displayedImage: CGImage?
     private var recipe = EditRecipe()
     private var generation = DecodeGeneration()
@@ -72,6 +77,9 @@ final class ViewerSession {
             position: index.currentIndex.map { $0 + 1 },
             image: displayedImage,
             sourceProperties: sourceImage?.properties,
+            decodedMediaID: decodedMediaID,
+            decodeGeneration: acceptedDecodeGeneration,
+            decodedSubimageIndex: sourceImage?.index,
             recipe: recipe,
             playbackKind: playbackKind,
             subimageIndex: subimageIndex,
@@ -116,10 +124,8 @@ final class ViewerSession {
                 usesRecursivePreference = false
                 startMonitoring(folder: folder)
             } else {
-                let items = supportedURLs.enumerated().map { order, url in
-                    MediaItem(url: url, finderOrder: order)
-                }
-                index.replaceItems(MediaItemSorter.sorted(items, by: sortOrder))
+                let items = FolderScanner().scan(urls: supportedURLs)
+                index.replaceItems(items)
                 sessionFolder = nil
                 sessionRecursive = false
                 usesRecursivePreference = false
@@ -288,8 +294,14 @@ final class ViewerSession {
         publish()
     }
 
+    func setRecipe(_ recipe: EditRecipe) {
+        self.recipe = recipe
+        renderRecipe()
+    }
+
     func renderedCurrentImage() throws -> CGImage {
-        guard let sourceImage else {
+        guard let sourceImage,
+              decodedMediaID == index.current?.id else {
             throw ImageDecodeError.cannotDecode
         }
         return try ImageRenderer().render(sourceImage.image, recipe: recipe)
@@ -318,11 +330,21 @@ final class ViewerSession {
     }
 
     func overwriteCurrent(
+        transaction: CropTransaction,
         format: ExportFormat,
         metadataPolicy: MetadataPolicy
     ) throws {
-        guard let sourceURL = index.current?.url else {
+        guard let current = index.current,
+              transaction.matches(
+                currentMediaID: current.id,
+                decodedMediaID: decodedMediaID,
+                decodeGeneration: acceptedDecodeGeneration,
+                subimageIndex: sourceImage?.index
+              ) else {
             throw ImageDecodeError.cannotOpen
+        }
+        guard sourceImage?.frameCount == 1 else {
+            throw ExportError.multiImageSourceUnsupported
         }
         let rendered = try renderedCurrentImage()
         try ExportCoordinator().overwrite(
@@ -331,11 +353,11 @@ final class ViewerSession {
                 sourceImage?.properties ?? [:],
                 renderedImage: rendered
             ),
-            originalURL: sourceURL,
+            originalURL: current.url,
             format: format,
             metadataPolicy: metadataPolicy
         )
-        open(urls: [sourceURL])
+        open(urls: [current.url])
     }
 
     func cancel() {
@@ -380,6 +402,8 @@ final class ViewerSession {
 
         guard let current = index.current else {
             sourceImage = nil
+            decodedMediaID = nil
+            acceptedDecodeGeneration = nil
             displayedImage = nil
             playbackKind = .still
             subimageIndex = 0
@@ -391,6 +415,10 @@ final class ViewerSession {
         }
 
         recipe = EditRecipe()
+        sourceImage = nil
+        decodedMediaID = nil
+        acceptedDecodeGeneration = nil
+        displayedImage = nil
         playbackKind = .still
         subimageIndex = 0
         subimageCount = 1
@@ -434,7 +462,8 @@ final class ViewerSession {
         for cacheKey: MediaSubimageKey,
         generation currentGeneration: UInt64
     ) {
-        guard generation.isCurrent(currentGeneration) else {
+        guard generation.isCurrent(currentGeneration),
+              index.current?.id == cacheKey.mediaID else {
             return
         }
         if let protectedCacheKey {
@@ -444,6 +473,8 @@ final class ViewerSession {
         cache.insert(decoded, for: cacheKey, cost: cost, protected: true)
         protectedCacheKey = cacheKey
         sourceImage = decoded
+        decodedMediaID = cacheKey.mediaID
+        acceptedDecodeGeneration = currentGeneration
         do {
             displayedImage = try ImageRenderer().render(decoded.image, recipe: recipe)
         } catch {
@@ -587,6 +618,8 @@ final class ViewerSession {
             self.cache.insert(decoded, for: key, cost: cost, protected: true)
             self.protectedCacheKey = key
             self.sourceImage = decoded
+            self.decodedMediaID = mediaID
+            self.acceptedDecodeGeneration = currentGeneration
             self.subimageIndex = decoded.index
             do {
                 let rendered = try ImageRenderer().render(decoded.image, recipe: self.recipe)

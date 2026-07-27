@@ -13,8 +13,51 @@ func rendererCropsAndRotatesRealPixels() throws {
 
     let rendered = try ImageRenderer().render(source, recipe: recipe)
 
-    #expect(rendered.width == 40)
-    #expect(rendered.height == 30)
+    #expect(rendered.width == 20)
+    #expect(rendered.height == 60)
+}
+
+@Test
+func rendererAppliesDisplaySpaceCropAfterRotationsAndFlips() throws {
+    let source = try TestImageFixtures.quadrantImage(width: 80, height: 60)
+    let crop = NormalizedRect(x: 0, y: 0, width: 0.5, height: 0.5)
+    let transforms = [
+        EditRecipe(rotationQuarterTurns: 1),
+        EditRecipe(flipHorizontal: true),
+        EditRecipe(flipVertical: true),
+    ]
+    let renderer = ImageRenderer()
+
+    for transform in transforms {
+        let displayed = try renderer.render(source, recipe: transform)
+        let cropRect = CropGeometry(crop: crop).pixelRect(
+            imageSize: CGSize(width: displayed.width, height: displayed.height)
+        )
+        let expected = try #require(displayed.cropping(to: cropRect))
+        let actual = try renderer.render(
+            source,
+            recipe: EditRecipe(
+                rotationQuarterTurns: transform.rotationQuarterTurns,
+                flipHorizontal: transform.flipHorizontal,
+                flipVertical: transform.flipVertical,
+                crop: crop
+            )
+        )
+
+        #expect(actual.width == expected.width)
+        #expect(actual.height == expected.height)
+        #expect(TestImageFixtures.pixelRGBA(actual, x: 1, y: 1)
+            == TestImageFixtures.pixelRGBA(expected, x: 1, y: 1))
+        #expect(TestImageFixtures.pixelRGBA(
+            actual,
+            x: max(actual.width - 2, 0),
+            y: max(actual.height - 2, 0)
+        ) == TestImageFixtures.pixelRGBA(
+            expected,
+            x: max(expected.width - 2, 0),
+            y: max(expected.height - 2, 0)
+        ))
+    }
 }
 
 @Test

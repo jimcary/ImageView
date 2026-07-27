@@ -2,7 +2,12 @@ import AppKit
 import ImageviewCore
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate:
+    NSObject,
+    NSApplicationDelegate,
+    NSMenuDelegate,
+    NSMenuItemValidation
+{
     private let startupURLs: [URL]
     private var windowControllers: [ViewerWindowController] = []
     private var preferencesWindowController: PreferencesWindowController?
@@ -11,6 +16,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var activeWindowController: ViewerWindowController? {
         windowControllers.first(where: { $0.window?.isKeyWindow == true })
             ?? windowControllers.last
+    }
+
+    private var keyWindowController: ViewerWindowController? {
+        windowControllers.first(where: { $0.window?.isKeyWindow == true })
     }
 
     init(startupURLs: [URL] = []) {
@@ -97,11 +106,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func deleteCurrent(_ sender: Any?) {
-        activeWindowController?.deleteCurrent(sender)
+        keyWindowController?.deleteCurrent(sender)
     }
 
     @objc private func commitCropAndOverwrite(_ sender: Any?) {
-        activeWindowController?.commitCropAndOverwrite(sender)
+        keyWindowController?.commitCropAndOverwrite(sender)
     }
 
     @objc private func toggleGrid(_ sender: Any?) {
@@ -355,6 +364,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 keyEquivalent: ""
             )
             clear.target = self
+        }
+    }
+
+    func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        switch menuItem.action {
+        case #selector(deleteCurrent(_:)):
+            keyWindowController?.hasCurrentItem == true
+        case #selector(commitCropAndOverwrite(_:)):
+            keyWindowController?.canCommitCrop == true
+        default:
+            true
         }
     }
 
