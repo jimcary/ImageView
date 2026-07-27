@@ -1,6 +1,26 @@
 import Foundation
+import ImageIO
 import Testing
 @testable import ImageviewCore
+
+@Test
+func exportMetadataMatchesRenderedPixelGeometry() throws {
+    let rendered = try TestImageFixtures.image(width: 20, height: 10)
+    let source: [CFString: Any] = [
+        kCGImagePropertyOrientation: 6,
+        kCGImagePropertyPixelWidth: 4_000,
+        kCGImagePropertyPixelHeight: 3_000
+    ]
+
+    let adjusted = ExportMetadata.adjustedProperties(
+        source,
+        renderedImage: rendered
+    )
+
+    #expect(adjusted[kCGImagePropertyOrientation] as? Int == 1)
+    #expect(adjusted[kCGImagePropertyPixelWidth] as? Int == 20)
+    #expect(adjusted[kCGImagePropertyPixelHeight] as? Int == 10)
+}
 
 @Test
 func failedOverwriteLeavesOriginalBytesUntouched() throws {

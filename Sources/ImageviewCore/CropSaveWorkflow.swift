@@ -1,6 +1,5 @@
 import CoreGraphics
 import Foundation
-import ImageIO
 
 public struct CropSaveWorkflow {
     private let decoder: ImageDecoder
@@ -28,7 +27,7 @@ public struct CropSaveWorkflow {
         let rendered = try renderer.render(decoded.image, recipe: recipe)
         try exporter.saveAs(
             image: rendered,
-            sourceProperties: adjustedProperties(
+            sourceProperties: ExportMetadata.adjustedProperties(
                 decoded.properties,
                 renderedImage: rendered
             ),
@@ -48,7 +47,7 @@ public struct CropSaveWorkflow {
         let rendered = try renderer.render(decoded.image, recipe: recipe)
         try exporter.overwrite(
             image: rendered,
-            sourceProperties: adjustedProperties(
+            sourceProperties: ExportMetadata.adjustedProperties(
                 decoded.properties,
                 renderedImage: rendered
             ),
@@ -56,16 +55,5 @@ public struct CropSaveWorkflow {
             format: format,
             metadataPolicy: metadataPolicy
         )
-    }
-
-    private func adjustedProperties(
-        _ source: [CFString: Any],
-        renderedImage: CGImage
-    ) -> [CFString: Any] {
-        var properties = source
-        properties[kCGImagePropertyOrientation] = 1
-        properties[kCGImagePropertyPixelWidth] = renderedImage.width
-        properties[kCGImagePropertyPixelHeight] = renderedImage.height
-        return properties
     }
 }

@@ -262,9 +262,13 @@ final class ViewerSession {
         guard index.current != nil else {
             throw ImageDecodeError.cannotOpen
         }
+        let rendered = try renderedCurrentImage()
         try ExportCoordinator().saveAs(
-            image: renderedCurrentImage(),
-            sourceProperties: sourceImage?.properties,
+            image: rendered,
+            sourceProperties: ExportMetadata.adjustedProperties(
+                sourceImage?.properties ?? [:],
+                renderedImage: rendered
+            ),
             destinationURL: destinationURL,
             format: format,
             metadataPolicy: metadataPolicy
@@ -279,9 +283,13 @@ final class ViewerSession {
         guard let sourceURL = index.current?.url else {
             throw ImageDecodeError.cannotOpen
         }
+        let rendered = try renderedCurrentImage()
         try ExportCoordinator().overwrite(
-            image: renderedCurrentImage(),
-            sourceProperties: sourceImage?.properties,
+            image: rendered,
+            sourceProperties: ExportMetadata.adjustedProperties(
+                sourceImage?.properties ?? [:],
+                renderedImage: rendered
+            ),
             originalURL: sourceURL,
             format: format,
             metadataPolicy: metadataPolicy
@@ -342,7 +350,9 @@ final class ViewerSession {
         }
 
         recipe = EditRecipe()
+        playbackKind = .still
         subimageIndex = 0
+        subimageCount = 1
         errorMessage = nil
         isLoading = true
         let currentGeneration = generation.begin()
@@ -393,7 +403,18 @@ final class ViewerSession {
         cache.insert(decoded, for: cacheKey, cost: cost, protected: true)
         protectedCacheKey = cacheKey
         sourceImage = decoded
-        displayedImage = decoded.image
+        do {
+            displayedImage = try ImageRenderer().render(decoded.image, recipe: recipe)
+        } catch {
+            displayedImage = nil
+            playbackKind = .still
+            subimageIndex = 0
+            subimageCount = 1
+            isLoading = false
+            errorMessage = error.localizedDescription
+            publish()
+            return
+        }
         playbackKind = decoded.playbackKind
         subimageIndex = decoded.index
         subimageCount = decoded.frameCount

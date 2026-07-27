@@ -33,9 +33,15 @@ open -a "$(pwd)/dist/Imageview.app" /path/to/folder
 ## Viewing and editing
 
 - Use the Previous and Next toolbar buttons, or the left and right arrow keys, to navigate a folder.
-- Open Grid to browse thumbnails, then select an image to return to the viewer.
-- Choose Crop, adjust the crop, then choose Save As to export JPEG, PNG, TIFF, or HEIC. Overwrite is available only for those source formats and first validates a temporary file.
-- Use Settings to select English, Simplified Chinese, or follow the system language.
+- Open Grid to browse, filter, and sort thumbnails, then select an image to return to the viewer.
+- Animated GIF, APNG, WebP, and HEICS files play locally with cancellable frame decoding.
+- PDF and other multi-image documents expose Previous Page and Next Page controls. PDF pages are rendered through Core Graphics for reliable display.
+- Slideshow uses the interval configured in Settings and stops at the end when loop navigation is disabled.
+- Choose Crop, adjust the crop, then choose Save As to export JPEG, PNG, TIFF, or HEIC. JPEG/HEIC quality and metadata preservation are configurable in the crop panel. Overwrite first validates a sibling temporary file.
+- Use Pin Image or Pin Clipboard for floating image/text references. Image pins support original-size and thumbnail modes.
+- OCR and subject extraction run locally. Subject extraction appears only on supported macOS versions.
+- Settings includes English, Simplified Chinese, system language, single/multi-window behavior, folder recursion, thumbnail sizing, slideshow interval, cache size, and configurable shortcuts.
+- User-selected folders are remembered with security-scoped bookmarks. Imageview never requests Full Disk Access.
 
 ## Privacy and licensing
 
