@@ -1,6 +1,5 @@
 import AppKit
 import ImageviewCore
-import UniformTypeIdentifiers
 
 @MainActor
 final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate {
@@ -38,7 +37,6 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     private let centerStack = NSStackView()
     private let splitView = NSSplitView()
     private let session = ViewerSession()
-    private var cropPanel: CropPanelController?
     private var cropBeforeEditing = NormalizedRect.full
     private var pinControllers: [PinboardWindowController] = []
     private var ocrTask: Task<Void, Never>?
@@ -143,43 +141,43 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     }
 
     @objc func beginCrop(_ sender: Any?) {
-        if let cropPanel {
-            cropPanel.showWindow(nil)
-            cropPanel.window?.makeKeyAndOrderFront(nil)
-            return
-        }
         guard session.snapshot.image != nil else {
             NSSound.beep()
             return
         }
 
         cropBeforeEditing = session.snapshot.recipe.crop
-        canvas.beginCrop(cropBeforeEditing)
-        let controller = CropPanelController()
-        controller.onAspectChanged = { [weak self] aspect in
-            self?.canvas.setCropAspect(aspect)
-            self?.updateCropPanelSize()
+        canvas.beginCrop()
+    }
+
+    @objc func commitCropAndOverwrite(_ sender: Any?) {
+        guard canvas.isCropMode, canvas.hasCropSelection,
+              let source = session.snapshot.current?.url else {
+            NSSound.beep()
+            return
         }
-        controller.onPixelSizeChanged = { [weak self] width, height in
-            self?.canvas.setCropPixelSize(width: width, height: height)
-            self?.updateCropPanelSize()
+        guard let format = exportFormat(for: source, quality: 0.9) else {
+            presentMessage(
+                title: L10n.text("error.cannot_overwrite_title"),
+                message: L10n.text("error.cannot_overwrite_message")
+            )
+            return
         }
-        controller.onCopy = { [weak self] in
-            self?.copyCroppedImage()
+
+        do {
+            try session.overwriteCurrent(format: format, metadataPolicy: .preserve)
+            finishCrop()
+        } catch {
+            presentError(title: L10n.text("error.overwrite_failed"), error: error)
         }
-        controller.onSaveAs = { [weak self] in
-            self?.saveCroppedImageAs()
+    }
+
+    @objc func cancelCrop(_ sender: Any?) {
+        guard canvas.isCropMode else {
+            return
         }
-        controller.onOverwrite = { [weak self] in
-            self?.overwriteCurrentImage()
-        }
-        controller.onCancel = { [weak self] in
-            self?.cancelCrop()
-        }
-        cropPanel = controller
-        controller.updatePixelSize(canvas.cropPixelSize())
-        controller.showWindow(nil)
-        positionCropPanel(controller)
+        session.setCrop(cropBeforeEditing)
+        finishCrop()
     }
 
     @objc func toggleGrid(_ sender: Any?) {
@@ -451,7 +449,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         }
         canvas.onCropChanged = { [weak self] crop in
             self?.session.setCrop(crop)
-            self?.updateCropPanelSize()
+        }
+        canvas.onCancelCrop = { [weak self] in
+            self?.cancelCrop(nil)
         }
         thumbnailStrip.onSelect = { [weak self] id in
             self?.session.select(id: id)
@@ -526,103 +526,8 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         return item
     }
 
-    private func updateCropPanelSize() {
-        cropPanel?.updatePixelSize(canvas.cropPixelSize())
-    }
-
-    private func positionCropPanel(_ controller: CropPanelController) {
-        guard let viewerFrame = window?.frame,
-              let panel = controller.window else {
-            return
-        }
-        panel.setFrameTopLeftPoint(
-            CGPoint(x: viewerFrame.maxX - panel.frame.width - 16, y: viewerFrame.maxY - 52)
-        )
-    }
-
-    private func copyCroppedImage() {
-        do {
-            let image = try session.renderedCurrentImage()
-            let pasteboard = NSPasteboard.general
-            pasteboard.clearContents()
-            pasteboard.writeObjects([NSImage(cgImage: image, size: .zero)])
-        } catch {
-            presentError(title: L10n.text("error.copy_failed"), error: error)
-        }
-    }
-
-    private func saveCroppedImageAs() {
-        guard let source = session.snapshot.current?.url else {
-            return
-        }
-        let quality = cropPanel?.exportQuality ?? 0.9
-        let metadataPolicy = cropPanel?.metadataPolicy ?? .preserve
-        let defaultFormat = exportFormat(for: source, quality: quality) ?? .png
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = [.jpeg, .png, .tiff, .heic]
-        panel.canCreateDirectories = true
-        panel.nameFieldStringValue = source.deletingPathExtension().lastPathComponent
-            + "-cropped."
-            + defaultFormat.fileExtension
-        guard panel.runModal() == .OK, let destination = panel.url else {
-            return
-        }
-
-        let format = exportFormat(for: destination, quality: quality) ?? defaultFormat
-        do {
-            try session.saveCurrent(
-                to: destination,
-                format: format,
-                metadataPolicy: metadataPolicy
-            )
-            finishCrop()
-        } catch {
-            presentError(title: L10n.text("error.save_failed"), error: error)
-        }
-    }
-
-    private func overwriteCurrentImage() {
-        guard let source = session.snapshot.current?.url else {
-            return
-        }
-        let quality = cropPanel?.exportQuality ?? 0.9
-        let metadataPolicy = cropPanel?.metadataPolicy ?? .preserve
-        guard let format = exportFormat(for: source, quality: quality) else {
-            presentMessage(
-                title: L10n.text("error.cannot_overwrite_title"),
-                message: L10n.text("error.cannot_overwrite_message")
-            )
-            return
-        }
-
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = L10n.text("confirm.overwrite_title")
-        alert.informativeText = L10n.text("confirm.overwrite_message")
-        alert.addButton(withTitle: L10n.text("confirm.overwrite_button"))
-        alert.addButton(withTitle: L10n.text("action.cancel"))
-        guard alert.runModal() == .alertFirstButtonReturn else {
-            return
-        }
-
-        do {
-            try session.overwriteCurrent(format: format, metadataPolicy: metadataPolicy)
-            finishCrop()
-        } catch {
-            presentError(title: L10n.text("error.overwrite_failed"), error: error)
-        }
-    }
-
-    private func cancelCrop() {
-        session.setCrop(cropBeforeEditing)
-        finishCrop()
-    }
-
     private func finishCrop() {
         canvas.endCrop()
-        cropPanel?.onCancel = nil
-        cropPanel?.close()
-        cropPanel = nil
     }
 
     private func exportFormat(for url: URL, quality: Double) -> ExportFormat? {

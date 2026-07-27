@@ -96,8 +96,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         activeWindowController?.performOCR(sender)
     }
 
-    @objc private func beginCrop(_ sender: Any?) {
-        activeWindowController?.beginCrop(sender)
+    @objc private func commitCropAndOverwrite(_ sender: Any?) {
+        activeWindowController?.commitCropAndOverwrite(sender)
     }
 
     @objc private func toggleGrid(_ sender: Any?) {
@@ -249,8 +249,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         )
         recognize.target = self
         let crop = editMenu.addItem(
-            withTitle: L10n.text("toolbar.crop"),
-            action: #selector(beginCrop(_:)),
+            withTitle: L10n.text("menu.crop_and_save"),
+            action: #selector(commitCropAndOverwrite(_:)),
             shortcut: .crop
         )
         crop.target = self

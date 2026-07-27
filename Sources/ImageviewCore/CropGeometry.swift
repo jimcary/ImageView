@@ -46,6 +46,34 @@ public struct CropGeometry: Sendable {
         self.crop = crop
     }
 
+    public static func normalizedSelection(
+        from start: CGPoint,
+        to end: CGPoint,
+        inside bounds: CGRect
+    ) -> NormalizedRect? {
+        let bounds = bounds.standardized
+        guard bounds.width > 0, bounds.height > 0 else {
+            return nil
+        }
+
+        let selection = CGRect(
+            x: start.x,
+            y: start.y,
+            width: end.x - start.x,
+            height: end.y - start.y
+        ).standardized.intersection(bounds)
+        guard !selection.isNull, selection.width >= 1, selection.height >= 1 else {
+            return nil
+        }
+
+        return NormalizedRect(
+            x: (selection.minX - bounds.minX) / bounds.width,
+            y: (selection.minY - bounds.minY) / bounds.height,
+            width: selection.width / bounds.width,
+            height: selection.height / bounds.height
+        )
+    }
+
     public func pixelRect(imageSize: CGSize) -> CGRect {
         guard imageSize.width > 0, imageSize.height > 0 else {
             return .zero

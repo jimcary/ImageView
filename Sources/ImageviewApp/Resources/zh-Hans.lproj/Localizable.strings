@@ -11,6 +11,7 @@
 "menu.close_window" = "关闭窗口";
 "menu.preferences" = "设置…";
 "menu.copy" = "复制";
+"menu.crop_and_save" = "裁剪并保存";
 "menu.pin_clipboard" = "贴图剪贴板内容";
 "menu.recognize_text" = "识别文字";
 "menu.previous" = "上一张";

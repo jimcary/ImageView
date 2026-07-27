@@ -10,6 +10,10 @@ final class ImageCanvasView: NSView {
     var onOpenURLs: (([URL]) -> Void)?
     var onNavigate: ((Bool) -> Void)?
     var onCropChanged: ((NormalizedRect) -> Void)?
+    var onCancelCrop: (() -> Void)?
+
+    private(set) var hasCropSelection = false
+    var isCropMode: Bool { cropMode }
 
     var image: CGImage? {
         didSet {
@@ -29,12 +33,11 @@ final class ImageCanvasView: NSView {
     private var lastDragPoint: CGPoint?
     private var cropMode = false
     private var crop = NormalizedRect.full
-    private var cropAspect = CropAspect.free
     private var cropDrag: CropDrag?
 
     private struct CropDrag {
         let startPoint: CGPoint
-        let startCrop: NormalizedRect
+        let startCrop: NormalizedRect?
         let edges: CropEdges
     }
 
@@ -56,6 +59,7 @@ final class ImageCanvasView: NSView {
         wantsLayer = true
         layer?.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1).cgColor
         registerForDraggedTypes([.fileURL])
+        setAccessibilityIdentifier("imageCanvas")
     }
 
     required init?(coder: NSCoder) {
@@ -77,7 +81,7 @@ final class ImageCanvasView: NSView {
                 respectFlipped: true,
                 hints: [.interpolation: NSImageInterpolation.high]
             )
-            if cropMode {
+            if cropMode, hasCropSelection {
                 drawCropOverlay(in: drawingRect)
             }
         } else {
@@ -111,63 +115,19 @@ final class ImageCanvasView: NSView {
         needsDisplay = true
     }
 
-    func beginCrop(_ crop: NormalizedRect = .full) {
+    func beginCrop() {
         cropMode = true
-        self.crop = crop
-        cropAspect = .free
+        hasCropSelection = false
+        cropDrag = nil
+        window?.makeFirstResponder(self)
         needsDisplay = true
     }
 
     func endCrop() {
         cropMode = false
+        hasCropSelection = false
         cropDrag = nil
         needsDisplay = true
-    }
-
-    func setCropAspect(_ aspect: CropAspect) {
-        cropAspect = aspect
-        guard let image else {
-            return
-        }
-
-        let ratio: CGFloat?
-        if aspect == .original {
-            ratio = CGFloat(image.width) / CGFloat(image.height)
-        } else {
-            ratio = aspect.ratio
-        }
-        guard let ratio else {
-            return
-        }
-
-        let current = CGRect(x: crop.x, y: crop.y, width: crop.width, height: crop.height)
-        let constrained = constrain(current, ratio: ratio)
-        updateCrop(constrained)
-    }
-
-    func setCropPixelSize(width: Int, height: Int) {
-        guard let image, width > 0, height > 0 else {
-            return
-        }
-        let normalizedWidth = min(CGFloat(width) / CGFloat(image.width), 1)
-        let normalizedHeight = min(CGFloat(height) / CGFloat(image.height), 1)
-        let proposed = CGRect(
-            x: crop.x + (crop.width - normalizedWidth) / 2,
-            y: crop.y + (crop.height - normalizedHeight) / 2,
-            width: normalizedWidth,
-            height: normalizedHeight
-        )
-        updateCrop(proposed)
-    }
-
-    func cropPixelSize() -> CGSize? {
-        guard let image else {
-            return nil
-        }
-        return CGSize(
-            width: round(crop.width * CGFloat(image.width)),
-            height: round(crop.height * CGFloat(image.height))
-        )
     }
 
     override func scrollWheel(with event: NSEvent) {
@@ -190,10 +150,16 @@ final class ImageCanvasView: NSView {
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         if cropMode, let image {
-            let displayRect = cropDisplayRect(in: imageRect(for: image))
-            let edges = cropEdges(at: point, cropRect: displayRect)
-            if !edges.isEmpty {
-                cropDrag = CropDrag(startPoint: point, startCrop: crop, edges: edges)
+            let imageRect = imageRect(for: image)
+            if hasCropSelection {
+                let displayRect = cropDisplayRect(in: imageRect)
+                let edges = cropEdges(at: point, cropRect: displayRect)
+                if !edges.isEmpty {
+                    cropDrag = CropDrag(startPoint: point, startCrop: crop, edges: edges)
+                    return
+                }
+            } else if imageRect.contains(point) {
+                cropDrag = CropDrag(startPoint: point, startCrop: nil, edges: [])
                 return
             }
         }
@@ -203,7 +169,21 @@ final class ImageCanvasView: NSView {
     override func mouseDragged(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
         if let cropDrag, let image {
-            updateCropDrag(cropDrag, currentPoint: point, imageRect: imageRect(for: image))
+            let imageRect = imageRect(for: image)
+            if cropDrag.startCrop != nil {
+                updateCropDrag(
+                    cropDrag,
+                    currentPoint: point,
+                    imageRect: imageRect
+                )
+            } else if let selection = CropGeometry.normalizedSelection(
+                from: cropDrag.startPoint,
+                to: point,
+                inside: imageRect
+            ) {
+                hasCropSelection = true
+                updateCrop(selection)
+            }
             return
         }
         if let lastDragPoint {
@@ -217,6 +197,14 @@ final class ImageCanvasView: NSView {
     override func mouseUp(with event: NSEvent) {
         lastDragPoint = nil
         cropDrag = nil
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        if cropMode {
+            onCancelCrop?()
+        } else {
+            super.cancelOperation(sender)
+        }
     }
 
     override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
@@ -340,16 +328,18 @@ final class ImageCanvasView: NSView {
         currentPoint: CGPoint,
         imageRect: CGRect
     ) {
-        guard imageRect.width > 0, imageRect.height > 0 else {
+        guard let startCrop = drag.startCrop,
+              imageRect.width > 0,
+              imageRect.height > 0 else {
             return
         }
         let deltaX = (currentPoint.x - drag.startPoint.x) / imageRect.width
         let deltaY = (currentPoint.y - drag.startPoint.y) / imageRect.height
         var proposed = CGRect(
-            x: drag.startCrop.x,
-            y: drag.startCrop.y,
-            width: drag.startCrop.width,
-            height: drag.startCrop.height
+            x: startCrop.x,
+            y: startCrop.y,
+            width: startCrop.width,
+            height: startCrop.height
         )
 
         if drag.edges.contains(.move) {
@@ -372,33 +362,7 @@ final class ImageCanvasView: NSView {
             }
         }
 
-        if let ratio = effectiveCropRatio() {
-            proposed = constrain(proposed, ratio: ratio)
-        }
         updateCrop(proposed)
-    }
-
-    private func effectiveCropRatio() -> CGFloat? {
-        if cropAspect == .original, let image {
-            return CGFloat(image.width) / CGFloat(image.height)
-        }
-        return cropAspect.ratio
-    }
-
-    private func constrain(_ proposed: CGRect, ratio: CGFloat) -> CGRect {
-        let standardized = proposed.standardized
-        let size: CGSize
-        if standardized.width / max(standardized.height, 0.0001) > ratio {
-            size = CGSize(width: standardized.height * ratio, height: standardized.height)
-        } else {
-            size = CGSize(width: standardized.width, height: standardized.width / ratio)
-        }
-        return CGRect(
-            x: standardized.midX - size.width / 2,
-            y: standardized.midY - size.height / 2,
-            width: size.width,
-            height: size.height
-        )
     }
 
     private func updateCrop(_ proposed: CGRect) {
@@ -414,6 +378,12 @@ final class ImageCanvasView: NSView {
             width: rectangle.width,
             height: rectangle.height
         )
+        onCropChanged?(crop)
+        needsDisplay = true
+    }
+
+    private func updateCrop(_ crop: NormalizedRect) {
+        self.crop = crop
         onCropChanged?(crop)
         needsDisplay = true
     }

@@ -30,13 +30,13 @@ final class ImageviewAppUITests: XCTestCase {
     }
 
     func testOpenFolderAndNavigateNextAndPrevious() {
-        XCTAssertTrue(app.windows["blue.png · 1 / 4"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 4"].waitForExistence(timeout: 5))
 
         app.toolbars.buttons["Next"].click()
         XCTAssertTrue(app.windows["green.png · 2 / 4"].waitForExistence(timeout: 5))
 
         app.toolbars.buttons["Previous"].click()
-        XCTAssertTrue(app.windows["blue.png · 1 / 4"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 4"].waitForExistence(timeout: 5))
     }
 
     func testGridRoundTripReturnsToViewer() {
@@ -47,20 +47,15 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertFalse(app.collectionViews.firstMatch.exists)
     }
 
-    func testCropSaveCreatesExport() {
-        let exportURL = fixturesURL.appendingPathComponent("crop-export.png")
+    func testCropSelectionAndCommandKOverwriteOriginal() {
+        let canvas = app.otherElements["imageCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
         app.toolbars.buttons["Crop"].click()
-        let cropWindow = app.windows["Crop"]
-        XCTAssertTrue(cropWindow.waitForExistence(timeout: 5))
-
-        cropWindow.buttons["Save As…"].click()
-        let savePanel = app.sheets.firstMatch
-        XCTAssertTrue(savePanel.waitForExistence(timeout: 5))
-        savePanel.textFields.firstMatch.click()
-        savePanel.textFields.firstMatch.typeText(exportURL.path)
-        savePanel.buttons["Save"].click()
-
-        XCTAssertTrue(FileManager.default.fileExists(atPath: exportURL.path))
+        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.25))
+        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.75))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        app.typeKey("k", modifierFlags: .command)
+        XCTAssertFalse(app.windows["Crop"].exists)
     }
 
     func testPinCreatesFloatingImageWindow() {
@@ -73,8 +68,7 @@ final class ImageviewAppUITests: XCTestCase {
 
         app.terminate()
         launchApp()
-        app.toolbars.buttons["Crop"].click()
-        XCTAssertTrue(app.windows["裁剪"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.toolbars.buttons["裁剪"].waitForExistence(timeout: 5))
     }
 
     func testCorruptImageDoesNotPreventLaterNavigation() {
@@ -89,7 +83,7 @@ final class ImageviewAppUITests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("imageview-ui-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try writePNG(named: "blue.png", color: .systemBlue, to: directory)
+        try writeJPEG(named: "blue.jpg", color: .systemBlue, to: directory)
         try writePNG(named: "green.png", color: .systemGreen, to: directory)
         try writePNG(named: "red.png", color: .systemRed, to: directory)
         try Data("not an image".utf8).write(to: directory.appendingPathComponent("middle.png"))
@@ -105,6 +99,21 @@ final class ImageviewAppUITests: XCTestCase {
 
         let bitmap = NSBitmapImageRep(data: image.tiffRepresentation!)!
         let data = bitmap.representation(using: .png, properties: [:])!
+        try data.write(to: directory.appendingPathComponent(name))
+    }
+
+    private func writeJPEG(named name: String, color: NSColor, to directory: URL) throws {
+        let image = NSImage(size: NSSize(width: 24, height: 24))
+        image.lockFocus()
+        color.setFill()
+        NSBezierPath(rect: NSRect(x: 0, y: 0, width: 24, height: 24)).fill()
+        image.unlockFocus()
+
+        let bitmap = NSBitmapImageRep(data: image.tiffRepresentation!)!
+        let data = bitmap.representation(
+            using: .jpeg,
+            properties: [.compressionFactor: 0.9]
+        )!
         try data.write(to: directory.appendingPathComponent(name))
     }
 

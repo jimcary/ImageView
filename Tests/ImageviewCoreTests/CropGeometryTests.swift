@@ -3,6 +3,19 @@ import Testing
 @testable import ImageviewCore
 
 @Test
+func dragPointsProduceAClampedNormalizedSelection() throws {
+    let selection = try #require(
+        CropGeometry.normalizedSelection(
+            from: CGPoint(x: 30, y: 10),
+            to: CGPoint(x: 130, y: 90),
+            inside: CGRect(x: 10, y: 10, width: 100, height: 50)
+        )
+    )
+
+    #expect(selection == NormalizedRect(x: 0.2, y: 0, width: 0.8, height: 1))
+}
+
+@Test
 func normalizedCropConvertsToIntegralSourcePixels() {
     let crop = NormalizedRect(x: 0.25, y: 0.10, width: 0.50, height: 0.40)
 

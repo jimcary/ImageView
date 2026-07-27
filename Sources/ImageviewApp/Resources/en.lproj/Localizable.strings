@@ -11,6 +11,7 @@
 "menu.close_window" = "Close Window";
 "menu.preferences" = "Settings…";
 "menu.copy" = "Copy";
+"menu.crop_and_save" = "Crop and Save";
 "menu.pin_clipboard" = "Pin Clipboard";
 "menu.recognize_text" = "Recognize Text";
 "menu.previous" = "Previous Image";
