@@ -73,6 +73,8 @@
 "pin.image" = "图片贴图";
 "pin.text" = "文字贴图";
 "pin.opacity" = "不透明度 %d%%";
+"pin.original_size" = "原始尺寸";
+"pin.thumbnail_mode" = "缩略模式";
 "pin.close" = "关闭贴图";
 "preferences.title" = "Imageview 设置";
 "preferences.general" = "通用";

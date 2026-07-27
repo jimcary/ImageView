@@ -73,6 +73,8 @@
 "pin.image" = "Image Pin";
 "pin.text" = "Text Pin";
 "pin.opacity" = "Opacity %d%%";
+"pin.original_size" = "Original Size";
+"pin.thumbnail_mode" = "Thumbnail Mode";
 "pin.close" = "Close Pin";
 "preferences.title" = "Imageview Settings";
 "preferences.general" = "General";
