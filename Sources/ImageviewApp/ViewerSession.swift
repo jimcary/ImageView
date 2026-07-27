@@ -18,6 +18,7 @@ final class ViewerSession {
 
     private var index = MediaIndex(items: [])
     private let preferences: PreferencesStore
+    private let securityScopedAccess = SecurityScopedAccessSession()
     private var sourceImage: DecodedImage?
     private var displayedImage: CGImage?
     private var recipe = EditRecipe()
@@ -71,6 +72,7 @@ final class ViewerSession {
             return
         }
 
+        securityScopedAccess.release()
         do {
             let values = try urls[0].resourceValues(forKeys: [.isDirectoryKey])
             if urls.count == 1, values.isDirectory == true {
@@ -80,8 +82,11 @@ final class ViewerSession {
 
             let supportedURLs = urls.filter(MediaTypeRegistry.isSupported(url:))
             if supportedURLs.count == 1, let fileURL = supportedURLs.first {
+                let folder = securityScopedAccess.activate(
+                    folderURL: fileURL.deletingLastPathComponent()
+                )
                 let scanned = try FolderScanner().scan(
-                    folder: fileURL.deletingLastPathComponent(),
+                    folder: folder,
                     recursive: false
                 )
                 let sorted = MediaItemSorter.sorted(scanned, by: sortOrder)
@@ -91,7 +96,6 @@ final class ViewerSession {
                 }) {
                     index.select(id: selected.id)
                 }
-                let folder = fileURL.deletingLastPathComponent()
                 sessionFolder = folder
                 sessionRecursive = false
                 usesRecursivePreference = false
@@ -109,15 +113,23 @@ final class ViewerSession {
             }
             decodeCurrent()
         } catch {
+            securityScopedAccess.release()
             publishError(error.localizedDescription)
         }
     }
 
     func open(folder: URL) throws {
+        let folder = securityScopedAccess.activate(folderURL: folder)
         sessionFolder = folder
         sessionRecursive = preferences.recursiveScan
         usesRecursivePreference = true
-        let items = try FolderScanner().scan(folder: folder, recursive: sessionRecursive)
+        let items: [MediaItem]
+        do {
+            items = try FolderScanner().scan(folder: folder, recursive: sessionRecursive)
+        } catch {
+            securityScopedAccess.release()
+            throw error
+        }
         index.replaceItems(MediaItemSorter.sorted(items, by: sortOrder))
         startMonitoring(folder: folder)
         decodeCurrent()
@@ -230,6 +242,7 @@ final class ViewerSession {
         folderMonitor = nil
         memoryPressureSource?.cancel()
         memoryPressureSource = nil
+        securityScopedAccess.release()
         generation.invalidate()
     }
 
