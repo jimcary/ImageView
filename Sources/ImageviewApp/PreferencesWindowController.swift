@@ -382,6 +382,7 @@ final class PreferencesWindowController: NSWindowController {
         case "\u{F702}": "←"
         case "\u{F703}": "→"
         case "\u{7F}": "⌫"
+        case "\r": "↩"
         default: key.uppercased()
         }
     }
@@ -391,6 +392,7 @@ final class PreferencesWindowController: NSWindowController {
         case "←": "\u{F702}"
         case "→": "\u{F703}"
         case "⌫": "\u{7F}"
+        case "↩": "\r"
         default: key.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }

@@ -10,6 +10,7 @@
 "menu.no_recent" = "没有最近项目";
 "menu.clear_recent" = "清除菜单";
 "menu.save" = "保存";
+"menu.show_in_finder" = "在 Finder 中显示";
 "menu.print" = "打印…";
 "menu.close_window" = "关闭窗口";
 "menu.preferences" = "设置…";
@@ -133,7 +134,7 @@
 "preferences.pin_opacity" = "默认贴图不透明度";
 "preferences.cache_limit" = "缓存上限（MB）";
 "preferences.reset" = "恢复默认设置";
-"preferences.shortcuts_info" = "打开 ⌘O · 上一张 ← · 下一张 → · 裁剪 ⌘K · 删除 ⌫ · 网格 G · 信息 I · 贴图 P · OCR ⇧⌘R";
+"preferences.shortcuts_info" = "打开 ⌘O · 保存 ⌘S · 裁剪 ⌘K · Finder 中显示 ⌘↩ · 删除 ⌫ · 上一张 ← · 下一张 →";
 "preferences.shortcut_error" = "快捷键未保存";
 "preferences.shortcut_conflict" = "该快捷键已分配给其他命令。";
 "preferences.shortcut_invalid" = "请为每个命令输入一个按键。";

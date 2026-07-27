@@ -240,7 +240,7 @@ public final class PreferencesStore {
 
     public func updateShortcuts(_ shortcuts: [Shortcut]) throws {
         guard Self.validCommands(in: shortcuts),
-              shortcuts.allSatisfy({ !$0.key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+              shortcuts.allSatisfy({ Self.validKey($0.key) }) else {
             throw ShortcutPreferencesError.invalid
         }
         guard ShortcutValidator.conflicts(in: shortcuts).isEmpty else {
@@ -268,5 +268,10 @@ public final class PreferencesStore {
     private static func validCommands(in shortcuts: [Shortcut]) -> Bool {
         Set(shortcuts.map(\.command)) == Set(ShortcutCommand.allCases)
             && shortcuts.count == ShortcutCommand.allCases.count
+    }
+
+    private static func validKey(_ key: String) -> Bool {
+        key == "\r"
+            || !key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 }

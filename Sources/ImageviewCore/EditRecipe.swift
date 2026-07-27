@@ -55,6 +55,31 @@ public struct CropTransaction: Equatable, Sendable {
         self.originalRecipe = originalRecipe
     }
 
+    public static func forSaving(
+        currentMediaID: MediaItem.ID?,
+        decodedMediaID: MediaItem.ID?,
+        decodeGeneration: UInt64?,
+        subimageIndex: Int?,
+        subimageCount: Int,
+        isCropping: Bool,
+        recipe: EditRecipe
+    ) -> CropTransaction? {
+        guard !isCropping,
+              subimageCount == 1,
+              let currentMediaID,
+              decodedMediaID == currentMediaID,
+              let decodeGeneration,
+              let subimageIndex else {
+            return nil
+        }
+        return CropTransaction(
+            mediaID: currentMediaID,
+            decodeGeneration: decodeGeneration,
+            subimageIndex: subimageIndex,
+            originalRecipe: recipe
+        )
+    }
+
     public func matches(
         currentMediaID: MediaItem.ID?,
         decodedMediaID: MediaItem.ID?,

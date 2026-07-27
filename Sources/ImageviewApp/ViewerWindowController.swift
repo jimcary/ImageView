@@ -75,6 +75,26 @@ final class ViewerWindowController:
             )
     }
 
+    var canSaveCurrentEdits: Bool {
+        saveTransaction != nil
+    }
+
+    private var saveTransaction: CropTransaction? {
+        let snapshot = session.snapshot
+        guard snapshot.image != nil else {
+            return nil
+        }
+        return CropTransaction.forSaving(
+            currentMediaID: snapshot.current?.id,
+            decodedMediaID: snapshot.decodedMediaID,
+            decodeGeneration: snapshot.decodeGeneration,
+            subimageIndex: snapshot.decodedSubimageIndex,
+            subimageCount: snapshot.subimageCount,
+            isCropping: canvas.isCropMode,
+            recipe: snapshot.recipe
+        )
+    }
+
     init(urls: [URL] = []) {
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1_040, height: 700),
@@ -249,6 +269,31 @@ final class ViewerWindowController:
                 metadataPolicy: .preserve
             )
             finishCrop()
+        } catch {
+            presentError(title: L10n.text("error.overwrite_failed"), error: error)
+        }
+    }
+
+    @objc func saveCurrentEdits(_ sender: Any?) {
+        guard let transaction = saveTransaction,
+              let source = session.snapshot.current?.url else {
+            NSSound.beep()
+            return
+        }
+        guard let format = exportFormat(for: source, quality: 0.9) else {
+            presentMessage(
+                title: L10n.text("error.cannot_overwrite_title"),
+                message: L10n.text("error.cannot_overwrite_message")
+            )
+            return
+        }
+
+        do {
+            try session.overwriteCurrent(
+                transaction: transaction,
+                format: format,
+                metadataPolicy: .preserve
+            )
         } catch {
             presentError(title: L10n.text("error.overwrite_failed"), error: error)
         }

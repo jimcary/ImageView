@@ -62,3 +62,58 @@ func cropTransactionRetainsTheCompleteRollbackRecipe() {
 
     #expect(transaction.originalRecipe == recipe)
 }
+
+@Test
+func saveTransactionRequiresDecodedStillImageOutsideCropMode() {
+    let recipe = EditRecipe(rotationQuarterTurns: 1, flipHorizontal: true)
+
+    #expect(
+        CropTransaction.forSaving(
+            currentMediaID: "fixture",
+            decodedMediaID: "fixture",
+            decodeGeneration: 4,
+            subimageIndex: 0,
+            subimageCount: 1,
+            isCropping: false,
+            recipe: recipe
+        ) == CropTransaction(
+            mediaID: "fixture",
+            decodeGeneration: 4,
+            subimageIndex: 0,
+            originalRecipe: recipe
+        )
+    )
+    #expect(
+        CropTransaction.forSaving(
+            currentMediaID: "fixture",
+            decodedMediaID: "fixture",
+            decodeGeneration: 4,
+            subimageIndex: 0,
+            subimageCount: 1,
+            isCropping: true,
+            recipe: recipe
+        ) == nil
+    )
+    #expect(
+        CropTransaction.forSaving(
+            currentMediaID: "fixture",
+            decodedMediaID: "other",
+            decodeGeneration: 4,
+            subimageIndex: 0,
+            subimageCount: 1,
+            isCropping: false,
+            recipe: recipe
+        ) == nil
+    )
+    #expect(
+        CropTransaction.forSaving(
+            currentMediaID: "fixture",
+            decodedMediaID: "fixture",
+            decodeGeneration: 4,
+            subimageIndex: 0,
+            subimageCount: 2,
+            isCropping: false,
+            recipe: recipe
+        ) == nil
+    )
+}

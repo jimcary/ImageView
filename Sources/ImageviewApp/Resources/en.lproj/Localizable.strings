@@ -10,6 +10,7 @@
 "menu.no_recent" = "No Recent Items";
 "menu.clear_recent" = "Clear Menu";
 "menu.save" = "Save";
+"menu.show_in_finder" = "Show in Finder";
 "menu.print" = "Print…";
 "menu.close_window" = "Close Window";
 "menu.preferences" = "Settings…";
@@ -133,7 +134,7 @@
 "preferences.pin_opacity" = "Default pin opacity";
 "preferences.cache_limit" = "Cache limit (MB)";
 "preferences.reset" = "Restore Defaults";
-"preferences.shortcuts_info" = "Open ⌘O · Previous ← · Next → · Crop ⌘K · Delete ⌫ · Grid G · Info I · Pin P · OCR ⇧⌘R";
+"preferences.shortcuts_info" = "Open ⌘O · Save ⌘S · Crop ⌘K · Show in Finder ⌘↩ · Delete ⌫ · Previous ← · Next →";
 "preferences.shortcut_error" = "Shortcut Not Saved";
 "preferences.shortcut_conflict" = "That shortcut is already assigned to another command.";
 "preferences.shortcut_invalid" = "Enter one key for every command.";

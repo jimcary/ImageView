@@ -121,6 +121,14 @@ final class AppDelegate:
         keyWindowController?.commitCropAndOverwrite(sender)
     }
 
+    @objc private func saveCurrentEdits(_ sender: Any?) {
+        keyWindowController?.saveCurrentEdits(sender)
+    }
+
+    @objc private func showCurrentInFinder(_ sender: Any?) {
+        keyWindowController?.showCurrentInFinder(sender)
+    }
+
     @objc private func toggleGrid(_ sender: Any?) {
         activeWindowController?.toggleGrid(sender)
     }
@@ -236,10 +244,16 @@ final class AppDelegate:
         fileMenu.addItem(.separator())
         let saveItem = fileMenu.addItem(
             withTitle: L10n.text("menu.save"),
-            action: #selector(commitCropAndOverwrite(_:)),
+            action: #selector(saveCurrentEdits(_:)),
             shortcut: .save
         )
         saveItem.target = self
+        let showInFinderItem = fileMenu.addItem(
+            withTitle: L10n.text("menu.show_in_finder"),
+            action: #selector(showCurrentInFinder(_:)),
+            shortcut: .showInFinder
+        )
+        showInFinderItem.target = self
         fileMenu.addItem(.separator())
         let printItem = fileMenu.addItem(
             withTitle: L10n.text("menu.print"),
@@ -401,6 +415,10 @@ final class AppDelegate:
             keyWindowController?.hasCurrentItem == true
         case #selector(commitCropAndOverwrite(_:)):
             keyWindowController?.canCommitCrop == true
+        case #selector(saveCurrentEdits(_:)):
+            keyWindowController?.canSaveCurrentEdits == true
+        case #selector(showCurrentInFinder(_:)):
+            keyWindowController?.hasCurrentItem == true
         case #selector(rotateLeft(_:)), #selector(rotateRight(_:)):
             keyWindowController?.hasCurrentItem == true
         default:
