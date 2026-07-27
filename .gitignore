@@ -2,4 +2,5 @@
 *.app/
 DerivedData/
 .build/
+dist/
 .superpowers/
