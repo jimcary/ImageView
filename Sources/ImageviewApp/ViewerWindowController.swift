@@ -4,6 +4,8 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSToolbarDelegate {
+    var onClose: (() -> Void)?
+    var onOpenURLsRequested: (([URL]) -> Void)?
     private enum ToolbarID {
         static let toolbar = NSToolbar.Identifier("ImageviewToolbar")
         static let open = NSToolbarItem.Identifier("open")
@@ -81,7 +83,11 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         guard panel.runModal() == .OK else {
             return
         }
-        open(urls: panel.urls)
+        if let onOpenURLsRequested {
+            onOpenURLsRequested(panel.urls)
+        } else {
+            open(urls: panel.urls)
+        }
     }
 
     @objc func showPrevious(_ sender: Any?) {
@@ -214,6 +220,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     func windowWillClose(_ notification: Notification) {
         session.cancel()
         ocrTask?.cancel()
+        onClose?()
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {

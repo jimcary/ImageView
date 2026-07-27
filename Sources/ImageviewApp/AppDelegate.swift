@@ -4,8 +4,13 @@ import ImageviewCore
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let startupURLs: [URL]
-    private var windowController: ViewerWindowController?
+    private var windowControllers: [ViewerWindowController] = []
     private var preferencesWindowController: PreferencesWindowController?
+
+    private var activeWindowController: ViewerWindowController? {
+        windowControllers.first(where: { $0.window?.isKeyWindow == true })
+            ?? windowControllers.last
+    }
 
     init(startupURLs: [URL] = []) {
         self.startupURLs = startupURLs
@@ -14,19 +19,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureMainMenu()
-        let controller = ViewerWindowController(urls: startupURLs)
-        windowController = controller
-        controller.showWindow(nil)
+        makeViewer(urls: startupURLs)
         NSApp.activate(ignoringOtherApps: true)
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        if let windowController {
-            windowController.open(urls: urls)
+        if PreferencesStore().singleWindow, let controller = activeWindowController {
+            controller.open(urls: urls)
         } else {
-            let controller = ViewerWindowController(urls: urls)
-            windowController = controller
-            controller.showWindow(nil)
+            makeViewer(urls: urls)
         }
     }
 
@@ -35,7 +36,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hasVisibleWindows flag: Bool
     ) -> Bool {
         if !flag {
-            windowController?.showWindow(nil)
+            if let controller = activeWindowController {
+                controller.showWindow(nil)
+            } else {
+                makeViewer(urls: [])
+            }
         }
         return true
     }
@@ -51,31 +56,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openDocument(_ sender: Any?) {
-        windowController?.chooseFiles(sender)
+        activeWindowController?.chooseFiles(sender)
     }
 
     @objc private func showPrevious(_ sender: Any?) {
-        windowController?.showPrevious(sender)
+        activeWindowController?.showPrevious(sender)
     }
 
     @objc private func showNext(_ sender: Any?) {
-        windowController?.showNext(sender)
+        activeWindowController?.showNext(sender)
     }
 
     @objc private func fitToWindow(_ sender: Any?) {
-        windowController?.fitToWindow(sender)
+        activeWindowController?.fitToWindow(sender)
     }
 
     @objc private func showActualSize(_ sender: Any?) {
-        windowController?.showActualSize(sender)
+        activeWindowController?.showActualSize(sender)
     }
 
     @objc private func pinClipboard(_ sender: Any?) {
-        windowController?.pinClipboard(sender)
+        activeWindowController?.pinClipboard(sender)
     }
 
     @objc private func recognizeText(_ sender: Any?) {
-        windowController?.performOCR(sender)
+        activeWindowController?.performOCR(sender)
     }
 
     @objc private func showPreferences(_ sender: Any?) {
@@ -94,15 +99,36 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func reloadLanguage() {
         configureMainMenu()
-        let currentURL = windowController?.currentURL
-        let previousController = windowController
-        let replacement = ViewerWindowController(urls: currentURL.map { [$0] } ?? [])
-        windowController = replacement
-        replacement.showWindow(nil)
-        previousController?.close()
+        let previousControllers = windowControllers
+        let urls = previousControllers.map(\.currentURL)
+        windowControllers.removeAll()
+        for url in urls {
+            makeViewer(urls: url.map { [$0] } ?? [])
+        }
+        previousControllers.forEach { $0.close() }
         preferencesWindowController?.close()
         preferencesWindowController = nil
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    @discardableResult
+    private func makeViewer(urls: [URL]) -> ViewerWindowController {
+        let controller = ViewerWindowController(urls: urls)
+        controller.onClose = { [weak self, weak controller] in
+            guard let controller else { return }
+            self?.windowControllers.removeAll { $0 === controller }
+        }
+        controller.onOpenURLsRequested = { [weak self, weak controller] urls in
+            guard let self else { return }
+            if PreferencesStore().singleWindow, let controller {
+                controller.open(urls: urls)
+            } else {
+                self.makeViewer(urls: urls)
+            }
+        }
+        windowControllers.append(controller)
+        controller.showWindow(nil)
+        return controller
     }
 
     private func configureMainMenu() {
