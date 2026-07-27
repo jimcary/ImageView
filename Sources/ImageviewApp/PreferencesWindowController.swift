@@ -5,6 +5,7 @@ import ImageviewCore
 final class PreferencesWindowController: NSWindowController {
     var onLanguageChanged: (() -> Void)?
     var onShortcutsChanged: (() -> Void)?
+    var onPreferencesChanged: (() -> Void)?
 
     private let preferences = PreferencesStore()
     private let languagePopup = NSPopUpButton()
@@ -13,6 +14,7 @@ final class PreferencesWindowController: NSWindowController {
     private let clearRecentButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let recursiveButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let wrapButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let showsThumbnailsButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let thumbnailSlider = NSSlider(value: 96, minValue: 48, maxValue: 320, target: nil, action: nil)
     private let thumbnailValue = NSTextField(labelWithString: "")
     private let pinOpacitySlider = NSSlider(value: 1, minValue: 0.1, maxValue: 1, target: nil, action: nil)
@@ -56,6 +58,7 @@ final class PreferencesWindowController: NSWindowController {
         configure(clearRecentButton, action: #selector(booleanChanged(_:)), tag: 3)
         configure(recursiveButton, action: #selector(booleanChanged(_:)), tag: 4)
         configure(wrapButton, action: #selector(booleanChanged(_:)), tag: 5)
+        configure(showsThumbnailsButton, action: #selector(booleanChanged(_:)), tag: 6)
 
         thumbnailSlider.target = self
         thumbnailSlider.action = #selector(thumbnailSizeChanged(_:))
@@ -95,6 +98,7 @@ final class PreferencesWindowController: NSWindowController {
             title: L10n.text("preferences.thumbnails"),
             symbol: "rectangle.grid.3x2",
             rows: [
+                titled(showsThumbnailsButton, L10n.text("preferences.show_thumbnails")),
                 sliderRow(
                     label: L10n.text("preferences.thumbnail_size"),
                     slider: thumbnailSlider,
@@ -204,6 +208,7 @@ final class PreferencesWindowController: NSWindowController {
         clearRecentButton.state = preferences.clearsRecentItems ? .on : .off
         recursiveButton.state = preferences.recursiveScan ? .on : .off
         wrapButton.state = preferences.wrapsNavigation ? .on : .off
+        showsThumbnailsButton.state = preferences.showsThumbnails ? .on : .off
         thumbnailSlider.integerValue = preferences.thumbnailSize
         pinOpacitySlider.doubleValue = preferences.pinOpacity
         cacheSlider.integerValue = preferences.cacheLimitMB
@@ -234,23 +239,28 @@ final class PreferencesWindowController: NSWindowController {
         case 3: preferences.clearsRecentItems = value
         case 4: preferences.recursiveScan = value
         case 5: preferences.wrapsNavigation = value
+        case 6: preferences.showsThumbnails = value
         default: break
         }
+        onPreferencesChanged?()
     }
 
     @objc private func thumbnailSizeChanged(_ sender: NSSlider) {
         preferences.thumbnailSize = sender.integerValue
         updateValueLabels()
+        onPreferencesChanged?()
     }
 
     @objc private func pinOpacityChanged(_ sender: NSSlider) {
         preferences.pinOpacity = sender.doubleValue
         updateValueLabels()
+        onPreferencesChanged?()
     }
 
     @objc private func cacheLimitChanged(_ sender: NSSlider) {
         preferences.cacheLimitMB = sender.integerValue
         updateValueLabels()
+        onPreferencesChanged?()
     }
 
     @objc private func resetPreferences(_ sender: Any?) {

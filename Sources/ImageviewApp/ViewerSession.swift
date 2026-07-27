@@ -27,6 +27,11 @@ final class ViewerSession {
     private var folderMonitor: FolderMonitor?
     private var cache: CostCache<String, DecodedImage>
     private var protectedCacheKey: String?
+    private var sessionFolder: URL?
+    private var sessionRecursive = false
+    private var usesRecursivePreference = false
+    private var sortOrder: MediaSortOrder = .name
+    private var memoryPressureSource: DispatchSourceMemoryPressure?
     private var isLoading = false
     private var errorMessage: String?
 
@@ -35,6 +40,17 @@ final class ViewerSession {
         cache = CostCache<String, DecodedImage>(
             costLimit: preferences.cacheLimitMB * 1_024 * 1_024
         )
+        let pressureSource = DispatchSource.makeMemoryPressureSource(
+            eventMask: [.warning, .critical],
+            queue: .main
+        )
+        pressureSource.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.handleMemoryPressure()
+            }
+        }
+        pressureSource.resume()
+        memoryPressureSource = pressureSource
     }
 
     var snapshot: Snapshot {
@@ -68,19 +84,26 @@ final class ViewerSession {
                     folder: fileURL.deletingLastPathComponent(),
                     recursive: false
                 )
-                let sorted = MediaItemSorter.sorted(scanned, by: .name)
+                let sorted = MediaItemSorter.sorted(scanned, by: sortOrder)
                 index.replaceItems(sorted)
                 if let selected = sorted.first(where: {
                     $0.url.standardizedFileURL == fileURL.standardizedFileURL
                 }) {
                     index.select(id: selected.id)
                 }
-                startMonitoring(folder: fileURL.deletingLastPathComponent())
+                let folder = fileURL.deletingLastPathComponent()
+                sessionFolder = folder
+                sessionRecursive = false
+                usesRecursivePreference = false
+                startMonitoring(folder: folder)
             } else {
                 let items = supportedURLs.enumerated().map { order, url in
                     MediaItem(url: url, finderOrder: order)
                 }
-                index.replaceItems(items)
+                index.replaceItems(MediaItemSorter.sorted(items, by: sortOrder))
+                sessionFolder = nil
+                sessionRecursive = false
+                usesRecursivePreference = false
                 folderMonitor?.stop()
                 folderMonitor = nil
             }
@@ -91,11 +114,11 @@ final class ViewerSession {
     }
 
     func open(folder: URL) throws {
-        let items = try FolderScanner().scan(
-            folder: folder,
-            recursive: preferences.recursiveScan
-        )
-        index.replaceItems(MediaItemSorter.sorted(items, by: .name))
+        sessionFolder = folder
+        sessionRecursive = preferences.recursiveScan
+        usesRecursivePreference = true
+        let items = try FolderScanner().scan(folder: folder, recursive: sessionRecursive)
+        index.replaceItems(MediaItemSorter.sorted(items, by: sortOrder))
         startMonitoring(folder: folder)
         decodeCurrent()
     }
@@ -113,12 +136,15 @@ final class ViewerSession {
     }
 
     func refreshCurrentFolder() {
-        guard let folder = index.current?.url.deletingLastPathComponent() else {
+        guard let folder = sessionFolder else {
             return
         }
         do {
-            let replacement = try FolderScanner().scan(folder: folder, recursive: false)
-            index.replaceItems(MediaItemSorter.sorted(replacement, by: .name))
+            let replacement = try FolderScanner().scan(
+                folder: folder,
+                recursive: sessionRecursive
+            )
+            index.replaceItems(MediaItemSorter.sorted(replacement, by: sortOrder))
             decodeCurrent()
         } catch {
             publishError(error.localizedDescription)
@@ -202,7 +228,25 @@ final class ViewerSession {
         prefetchTasks.removeAll()
         folderMonitor?.stop()
         folderMonitor = nil
+        memoryPressureSource?.cancel()
+        memoryPressureSource = nil
         generation.invalidate()
+    }
+
+    func setSortOrder(_ order: MediaSortOrder) {
+        sortOrder = order
+        index.replaceItems(MediaItemSorter.sorted(index.items, by: order))
+        publish()
+    }
+
+    func applyPreferences() {
+        cache.setCostLimit(preferences.cacheLimitMB * 1_024 * 1_024)
+        guard usesRecursivePreference,
+              sessionRecursive != preferences.recursiveScan else {
+            return
+        }
+        sessionRecursive = preferences.recursiveScan
+        refreshCurrentFolder()
     }
 
     func handleMemoryPressure() {

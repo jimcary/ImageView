@@ -6,18 +6,19 @@ final class ThumbnailStripView: NSView, NSCollectionViewDataSource, NSCollection
     var onSelect: ((MediaItem.ID) -> Void)?
 
     private let collectionView = NSCollectionView()
+    private let flowLayout = NSCollectionViewFlowLayout()
     private var items: [MediaItem] = []
+    private var thumbnailSize = AppPreferences.defaultThumbnailSize
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
 
-        let layout = NSCollectionViewFlowLayout()
-        layout.scrollDirection = .horizontal
-        layout.itemSize = NSSize(width: 86, height: 86)
-        layout.minimumInteritemSpacing = 6
-        layout.sectionInset = NSEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
+        flowLayout.scrollDirection = .horizontal
+        flowLayout.itemSize = NSSize(width: thumbnailSize, height: thumbnailSize)
+        flowLayout.minimumInteritemSpacing = 6
+        flowLayout.sectionInset = NSEdgeInsets(top: 6, left: 8, bottom: 6, right: 8)
 
-        collectionView.collectionViewLayout = layout
+        collectionView.collectionViewLayout = flowLayout
         collectionView.dataSource = self
         collectionView.delegate = self
         collectionView.isSelectable = true
@@ -63,6 +64,17 @@ final class ThumbnailStripView: NSView, NSCollectionViewDataSource, NSCollection
         collectionView.scrollToItems(at: [path], scrollPosition: .centeredHorizontally)
     }
 
+    func setThumbnailSize(_ size: Int) {
+        let bounded = min(max(size, 48), 320)
+        guard thumbnailSize != bounded else {
+            return
+        }
+        thumbnailSize = bounded
+        flowLayout.itemSize = NSSize(width: bounded, height: bounded)
+        flowLayout.invalidateLayout()
+        collectionView.reloadData()
+    }
+
     func numberOfSections(in collectionView: NSCollectionView) -> Int {
         1
     }
@@ -84,7 +96,7 @@ final class ThumbnailStripView: NSView, NSCollectionViewDataSource, NSCollection
         ) as? MediaCollectionItem else {
             return NSCollectionViewItem()
         }
-        item.configure(with: items[indexPath.item], maxPixelSize: 160)
+        item.configure(with: items[indexPath.item], maxPixelSize: thumbnailSize * 2)
         return item
     }
 

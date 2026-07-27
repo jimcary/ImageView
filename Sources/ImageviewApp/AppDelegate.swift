@@ -116,6 +116,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         controller.onShortcutsChanged = { [weak self] in
             self?.configureMainMenu()
         }
+        controller.onPreferencesChanged = { [weak self] in
+            self?.windowControllers.forEach { $0.applyPreferences() }
+        }
         preferencesWindowController = controller
         controller.showWindow(nil)
     }

@@ -8,7 +8,7 @@ public struct CostCache<Key: Hashable, Value> {
         var isProtected: Bool
     }
 
-    public let costLimit: Int
+    public private(set) var costLimit: Int
     public private(set) var totalCost = 0
     private var entries: [Key: Entry] = [:]
     private var sequence: UInt64 = 0
@@ -71,6 +71,11 @@ public struct CostCache<Key: Hashable, Value> {
         for key in removableKeys {
             removeValue(for: key)
         }
+    }
+
+    public mutating func setCostLimit(_ costLimit: Int) {
+        self.costLimit = max(costLimit, 0)
+        evictIfNeeded()
     }
 
     private mutating func evictIfNeeded() {

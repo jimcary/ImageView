@@ -23,6 +23,7 @@
 "toolbar.rotate_left" = "向左旋转";
 "toolbar.rotate_right" = "向右旋转";
 "toolbar.flip" = "水平翻转";
+"toolbar.flip_vertical" = "垂直翻转";
 "toolbar.crop" = "裁剪";
 "toolbar.grid" = "网格";
 "toolbar.thumbnails" = "缩略图";
@@ -54,7 +55,15 @@
 "confirm.overwrite_button" = "覆盖";
 "grid.format" = "格式";
 "grid.label" = "标签";
+"grid.sort" = "排序";
 "grid.all_formats" = "全部格式";
+"sort.name" = "名称";
+"sort.extension" = "扩展名";
+"sort.creation_date" = "创建时间";
+"sort.modification_date" = "修改时间";
+"sort.finder_order" = "Finder 顺序";
+"sort.random" = "随机";
+"sort.finder_label" = "Finder 标签";
 "label.all" = "全部标签";
 "label.none" = "无标签";
 "label.no_label" = "无标签";
@@ -94,6 +103,7 @@
 "preferences.recursive" = "包含子文件夹";
 "preferences.wrap" = "循环浏览";
 "preferences.thumbnail_size" = "缩略图尺寸";
+"preferences.show_thumbnails" = "显示缩略图栏";
 "preferences.pin_opacity" = "默认贴图不透明度";
 "preferences.cache_limit" = "缓存上限（MB）";
 "preferences.reset" = "恢复默认设置";

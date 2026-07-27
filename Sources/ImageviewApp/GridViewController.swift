@@ -4,10 +4,16 @@ import ImageviewCore
 @MainActor
 final class GridViewController: NSViewController, NSCollectionViewDataSource, NSCollectionViewDelegate {
     var onSelect: ((MediaItem.ID) -> Void)?
+    var onSortChanged: ((MediaSortOrder) -> Void)?
 
     private let collectionView = NSCollectionView()
     private let formatPopup = NSPopUpButton()
     private let labelPopup = NSPopUpButton()
+    private let sortPopup = NSPopUpButton()
+    private let sortOrders: [MediaSortOrder] = [
+        .name, .extension, .creationDate, .modificationDate,
+        .finderOrder, .random, .finderLabel,
+    ]
     private var allItems: [MediaItem] = []
     private var visibleItems: [MediaItem] = []
     private var selectedID: MediaItem.ID?
@@ -26,8 +32,13 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         ])
         labelPopup.target = self
         labelPopup.action = #selector(filterChanged(_:))
+        sortPopup.addItems(withTitles: sortOrders.map(sortTitle))
+        sortPopup.target = self
+        sortPopup.action = #selector(sortChanged(_:))
 
         let controls = NSStackView(views: [
+            NSTextField(labelWithString: L10n.text("grid.sort")),
+            sortPopup,
             NSTextField(labelWithString: L10n.text("grid.format")),
             formatPopup,
             NSTextField(labelWithString: L10n.text("grid.label")),
@@ -120,6 +131,13 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         applyFilter()
     }
 
+    @objc private func sortChanged(_ sender: Any?) {
+        guard sortOrders.indices.contains(sortPopup.indexOfSelectedItem) else {
+            return
+        }
+        onSortChanged?(sortOrders[sortPopup.indexOfSelectedItem])
+    }
+
     private func rebuildFormatMenu() {
         let selected = formatPopup.titleOfSelectedItem
         let formats = Set(allItems.map { $0.url.pathExtension.lowercased() })
@@ -158,5 +176,17 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
             return
         }
         collectionView.selectionIndexPaths = [IndexPath(item: index, section: 0)]
+    }
+
+    private func sortTitle(_ order: MediaSortOrder) -> String {
+        switch order {
+        case .name: L10n.text("sort.name")
+        case .extension: L10n.text("sort.extension")
+        case .creationDate: L10n.text("sort.creation_date")
+        case .modificationDate: L10n.text("sort.modification_date")
+        case .finderOrder: L10n.text("sort.finder_order")
+        case .random: L10n.text("sort.random")
+        case .finderLabel: L10n.text("sort.finder_label")
+        }
     }
 }

@@ -16,6 +16,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         static let rotateLeft = NSToolbarItem.Identifier("rotateLeft")
         static let rotateRight = NSToolbarItem.Identifier("rotateRight")
         static let flip = NSToolbarItem.Identifier("flip")
+        static let flipVertical = NSToolbarItem.Identifier("flipVertical")
         static let crop = NSToolbarItem.Identifier("crop")
         static let grid = NSToolbarItem.Identifier("grid")
         static let thumbnails = NSToolbarItem.Identifier("thumbnails")
@@ -37,6 +38,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var cropBeforeEditing = NormalizedRect.full
     private var pinControllers: [PinboardWindowController] = []
     private var ocrTask: Task<Void, Never>?
+    private var thumbnailHeightConstraint: NSLayoutConstraint?
 
     var currentURL: URL? {
         session.snapshot.current?.url
@@ -118,6 +120,10 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         session.flip(horizontal: true)
     }
 
+    @objc func flipVertical(_ sender: Any?) {
+        session.flip(horizontal: false)
+    }
+
     @objc func beginCrop(_ sender: Any?) {
         if let cropPanel {
             cropPanel.showWindow(nil)
@@ -164,7 +170,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     }
 
     @objc func toggleThumbnails(_ sender: Any?) {
-        thumbnailStrip.isHidden.toggle()
+        let preferences = PreferencesStore()
+        preferences.showsThumbnails.toggle()
+        applyPreferences()
     }
 
     @objc func toggleInspector(_ sender: Any?) {
@@ -240,6 +248,14 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         operation.run()
     }
 
+    func applyPreferences() {
+        let preferences = PreferencesStore()
+        thumbnailStrip.setThumbnailSize(preferences.thumbnailSize)
+        thumbnailHeightConstraint?.constant = CGFloat(preferences.thumbnailSize + 18)
+        thumbnailStrip.isHidden = !preferences.showsThumbnails
+        session.applyPreferences()
+    }
+
     func windowWillClose(_ notification: Notification) {
         session.cancel()
         ocrTask?.cancel()
@@ -250,7 +266,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         [
             ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.fit,
             ToolbarID.actual, ToolbarID.rotateLeft, ToolbarID.rotateRight,
-            ToolbarID.flip, ToolbarID.crop, ToolbarID.flexible,
+            ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop, ToolbarID.flexible,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
             ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr,
         ]
@@ -260,7 +276,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         [
             ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.flexible,
             ToolbarID.fit, ToolbarID.actual, ToolbarID.rotateLeft,
-            ToolbarID.rotateRight, ToolbarID.flip, ToolbarID.crop,
+            ToolbarID.rotateRight, ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
             ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr,
         ]
@@ -288,6 +304,8 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.rotate_right"), symbol: "rotate.right", action: #selector(rotateRight(_:)))
         case ToolbarID.flip:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.flip"), symbol: "arrow.left.and.right.righttriangle.left.righttriangle.right", action: #selector(flipHorizontal(_:)))
+        case ToolbarID.flipVertical:
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.flip_vertical"), symbol: "arrow.up.and.down.righttriangle.up.righttriangle.down", action: #selector(flipVertical(_:)))
         case ToolbarID.crop:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.crop"), symbol: "crop", action: #selector(beginCrop(_:)))
         case ToolbarID.grid:
@@ -332,8 +350,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         gridController.view.isHidden = true
 
         thumbnailStrip.translatesAutoresizingMaskIntoConstraints = false
-        thumbnailStrip.heightAnchor.constraint(equalToConstant: 104).isActive = true
-        thumbnailStrip.isHidden = !PreferencesStore().showsThumbnails
+        let thumbnailHeightConstraint = thumbnailStrip.heightAnchor.constraint(equalToConstant: 104)
+        thumbnailHeightConstraint.isActive = true
+        self.thumbnailHeightConstraint = thumbnailHeightConstraint
         centerStack.orientation = .vertical
         centerStack.spacing = 0
         centerStack.addArrangedSubview(contentArea)
@@ -348,11 +367,17 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         splitView.addArrangedSubview(centerStack)
         splitView.addArrangedSubview(inspectorController.view)
         window.contentView = splitView
+        applyPreferences()
     }
 
     private func configureCallbacks() {
         canvas.onOpenURLs = { [weak self] urls in
-            self?.open(urls: urls)
+            guard let self else { return }
+            if let onOpenURLsRequested {
+                onOpenURLsRequested(urls)
+            } else {
+                open(urls: urls)
+            }
         }
         canvas.onNavigate = { [weak self] forward in
             self?.session.move(forward ? .next : .previous)
@@ -368,6 +393,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             self?.session.select(id: id)
             self?.gridController.view.isHidden = true
             self?.canvas.isHidden = false
+        }
+        gridController.onSortChanged = { [weak self] order in
+            self?.session.setSortOrder(order)
         }
         inspectorController.onTrash = { [weak self] in
             self?.session.refreshCurrentFolder()

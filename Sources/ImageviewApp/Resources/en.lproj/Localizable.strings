@@ -23,6 +23,7 @@
 "toolbar.rotate_left" = "Rotate Left";
 "toolbar.rotate_right" = "Rotate Right";
 "toolbar.flip" = "Flip";
+"toolbar.flip_vertical" = "Flip Vertical";
 "toolbar.crop" = "Crop";
 "toolbar.grid" = "Grid";
 "toolbar.thumbnails" = "Thumbnails";
@@ -54,7 +55,15 @@
 "confirm.overwrite_button" = "Overwrite";
 "grid.format" = "Format";
 "grid.label" = "Label";
+"grid.sort" = "Sort";
 "grid.all_formats" = "All Formats";
+"sort.name" = "Name";
+"sort.extension" = "Extension";
+"sort.creation_date" = "Created";
+"sort.modification_date" = "Modified";
+"sort.finder_order" = "Finder Order";
+"sort.random" = "Random";
+"sort.finder_label" = "Finder Label";
 "label.all" = "All Labels";
 "label.none" = "Unlabeled";
 "label.no_label" = "No Label";
@@ -94,6 +103,7 @@
 "preferences.recursive" = "Include subfolders";
 "preferences.wrap" = "Loop navigation";
 "preferences.thumbnail_size" = "Thumbnail size";
+"preferences.show_thumbnails" = "Show thumbnail strip";
 "preferences.pin_opacity" = "Default pin opacity";
 "preferences.cache_limit" = "Cache limit (MB)";
 "preferences.reset" = "Restore Defaults";

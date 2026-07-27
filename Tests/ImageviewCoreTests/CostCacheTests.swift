@@ -37,3 +37,18 @@ func memoryPressureKeepsProtectedEntriesOnly() {
     #expect(cache.value(for: "current") == 1)
     #expect(cache.value(for: "prefetch") == nil)
 }
+
+@Test
+func loweringCostLimitEvictsUnprotectedEntriesImmediately() {
+    var cache = CostCache<String, Int>(costLimit: 20)
+    cache.insert(1, for: "protected", cost: 10, protected: true)
+    cache.insert(2, for: "old", cost: 5)
+    cache.insert(3, for: "new", cost: 5)
+
+    cache.setCostLimit(12)
+
+    #expect(cache.value(for: "protected") == 1)
+    #expect(cache.value(for: "old") == nil)
+    #expect(cache.value(for: "new") == nil)
+    #expect(cache.totalCost == 10)
+}
