@@ -4,6 +4,7 @@ import ImageviewCore
 @MainActor
 final class PreferencesWindowController: NSWindowController {
     var onLanguageChanged: (() -> Void)?
+    var onShortcutsChanged: (() -> Void)?
 
     private let preferences = PreferencesStore()
     private let languagePopup = NSPopUpButton()
@@ -19,6 +20,7 @@ final class PreferencesWindowController: NSWindowController {
     private let cacheSlider = NSSlider(value: 512, minValue: 64, maxValue: 4_096, target: nil, action: nil)
     private let cacheValue = NSTextField(labelWithString: "")
     private let tabController = NSTabViewController()
+    private var shortcutControls: [ShortcutControls] = []
 
     init() {
         let window = NSWindow(
@@ -114,7 +116,7 @@ final class PreferencesWindowController: NSWindowController {
         tabController.addChild(tab(
             title: L10n.text("preferences.shortcuts"),
             symbol: "command",
-            rows: [information(L10n.text("preferences.shortcuts_info"))]
+            rows: shortcutRows()
         ))
         tabController.addChild(tab(
             title: L10n.text("preferences.formats"),
@@ -205,6 +207,7 @@ final class PreferencesWindowController: NSWindowController {
         thumbnailSlider.integerValue = preferences.thumbnailSize
         pinOpacitySlider.doubleValue = preferences.pinOpacity
         cacheSlider.integerValue = preferences.cacheLimitMB
+        synchronizeShortcuts()
         updateValueLabels()
     }
 
@@ -255,4 +258,122 @@ final class PreferencesWindowController: NSWindowController {
         synchronizeFromStore()
         onLanguageChanged?()
     }
+
+    private func shortcutRows() -> [NSView] {
+        if shortcutControls.isEmpty {
+            shortcutControls = ShortcutCommand.allCases.map { command in
+                let keyField = NSTextField()
+                keyField.widthAnchor.constraint(equalToConstant: 64).isActive = true
+                keyField.alignment = .center
+                keyField.target = self
+                keyField.action = #selector(shortcutChanged(_:))
+
+                let modifierButtons = [
+                    modifierButton("⌘"),
+                    modifierButton("⌥"),
+                    modifierButton("⌃"),
+                    modifierButton("⇧"),
+                ]
+                return ShortcutControls(
+                    command: command,
+                    keyField: keyField,
+                    modifierButtons: modifierButtons
+                )
+            }
+        }
+
+        return shortcutControls.map { controls in
+            let row = NSStackView(views: [
+                shortcutLabel(for: controls.command),
+                controls.keyField,
+            ] + controls.modifierButtons)
+            row.orientation = .horizontal
+            row.spacing = 8
+            return row
+        }
+    }
+
+    private func shortcutLabel(for command: ShortcutCommand) -> NSView {
+        let label = NSTextField(labelWithString: L10n.text("shortcut.\(command.rawValue)"))
+        label.widthAnchor.constraint(equalToConstant: 140).isActive = true
+        return label
+    }
+
+    private func modifierButton(_ title: String) -> NSButton {
+        let button = NSButton(checkboxWithTitle: title, target: self, action: #selector(shortcutChanged(_:)))
+        button.setButtonType(.switch)
+        return button
+    }
+
+    private func synchronizeShortcuts() {
+        let shortcuts = preferences.shortcuts
+        for controls in shortcutControls {
+            guard let shortcut = shortcuts.first(where: { $0.command == controls.command }) else {
+                continue
+            }
+            controls.keyField.stringValue = displayKey(shortcut.key)
+            let modifiers: [ShortcutModifiers] = [.command, .option, .control, .shift]
+            for (button, modifier) in zip(controls.modifierButtons, modifiers) {
+                button.state = shortcut.modifiers.contains(modifier) ? .on : .off
+            }
+        }
+    }
+
+    @objc private func shortcutChanged(_ sender: Any?) {
+        let modifiers: [ShortcutModifiers] = [.command, .option, .control, .shift]
+        let shortcuts = shortcutControls.map { controls in
+            let selected = zip(controls.modifierButtons, modifiers).reduce(into: ShortcutModifiers()) {
+                if $1.0.state == .on {
+                    $0.insert($1.1)
+                }
+            }
+            return Shortcut(
+                command: controls.command,
+                key: storedKey(controls.keyField.stringValue),
+                modifiers: selected
+            )
+        }
+
+        do {
+            try preferences.updateShortcuts(shortcuts)
+            synchronizeShortcuts()
+            onShortcutsChanged?()
+        } catch ShortcutPreferencesError.conflict {
+            presentShortcutError(L10n.text("preferences.shortcut_conflict"))
+            synchronizeShortcuts()
+        } catch {
+            presentShortcutError(L10n.text("preferences.shortcut_invalid"))
+            synchronizeShortcuts()
+        }
+    }
+
+    private func displayKey(_ key: String) -> String {
+        switch key {
+        case "\u{F702}": "←"
+        case "\u{F703}": "→"
+        default: key.uppercased()
+        }
+    }
+
+    private func storedKey(_ key: String) -> String {
+        switch key.trimmingCharacters(in: .whitespacesAndNewlines) {
+        case "←": "\u{F702}"
+        case "→": "\u{F703}"
+        default: key.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+    }
+
+    private func presentShortcutError(_ message: String) {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = L10n.text("preferences.shortcut_error")
+        alert.informativeText = message
+        alert.runModal()
+    }
+}
+
+private struct ShortcutControls {
+    let command: ShortcutCommand
+    let keyField: NSTextField
+    let modifierButtons: [NSButton]
 }

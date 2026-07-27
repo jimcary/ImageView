@@ -4,6 +4,7 @@
 "menu.edit" = "编辑";
 "menu.view" = "显示";
 "menu.open" = "打开…";
+"menu.print" = "打印…";
 "menu.close_window" = "关闭窗口";
 "menu.preferences" = "设置…";
 "menu.copy" = "复制";
@@ -95,4 +96,15 @@
 "preferences.cache_limit" = "缓存上限（MB）";
 "preferences.reset" = "恢复默认设置";
 "preferences.shortcuts_info" = "打开 ⌘O · 上一张 ← · 下一张 → · 裁剪 C · 网格 G · 信息 I · 贴图 P · OCR ⇧⌘R";
+"preferences.shortcut_error" = "快捷键未保存";
+"preferences.shortcut_conflict" = "该快捷键已分配给其他命令。";
+"preferences.shortcut_invalid" = "请为每个命令输入一个按键。";
 "preferences.formats_info" = "JPEG、PNG、GIF、TIFF、BMP、HEIC/HEIF、PDF、EPS、ICO、ICNS、PSD、WebP、AVIF 及系统支持的 RAW。";
+"shortcut.open" = "打开";
+"shortcut.previous" = "上一张";
+"shortcut.next" = "下一张";
+"shortcut.crop" = "裁剪";
+"shortcut.grid" = "网格";
+"shortcut.inspector" = "信息";
+"shortcut.pin" = "贴图";
+"shortcut.ocr" = "识别文字";

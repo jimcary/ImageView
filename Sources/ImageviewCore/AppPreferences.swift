@@ -6,7 +6,7 @@ public enum AppLanguage: String, CaseIterable, Sendable {
     case zhHans = "zh-Hans"
 }
 
-public enum ShortcutCommand: String, CaseIterable, Sendable {
+public enum ShortcutCommand: String, CaseIterable, Codable, Sendable {
     case open
     case previous
     case next
@@ -17,7 +17,7 @@ public enum ShortcutCommand: String, CaseIterable, Sendable {
     case ocr
 }
 
-public struct ShortcutModifiers: OptionSet, Hashable, Sendable {
+public struct ShortcutModifiers: OptionSet, Hashable, Codable, Sendable {
     public let rawValue: Int
 
     public static let command = ShortcutModifiers(rawValue: 1 << 0)
@@ -30,7 +30,7 @@ public struct ShortcutModifiers: OptionSet, Hashable, Sendable {
     }
 }
 
-public struct Shortcut: Equatable, Hashable, Sendable {
+public struct Shortcut: Equatable, Hashable, Codable, Sendable {
     public let command: ShortcutCommand
     public let key: String
     public let modifiers: ShortcutModifiers
@@ -74,9 +74,28 @@ public enum ShortcutValidator {
     }
 }
 
+public enum ShortcutPreferencesError: Error, Equatable {
+    case conflict
+    case invalid
+}
+
 public enum AppPreferences {
     public static let defaultThumbnailSize = 96
     public static let defaultCacheLimitMB = 512
+    public static let defaultShortcuts = ShortcutCommand.allCases.map(defaultShortcut)
+
+    public static func defaultShortcut(for command: ShortcutCommand) -> Shortcut {
+        switch command {
+        case .open: Shortcut(command: command, key: "o", modifiers: [.command])
+        case .previous: Shortcut(command: command, key: "\u{F702}", modifiers: [])
+        case .next: Shortcut(command: command, key: "\u{F703}", modifiers: [])
+        case .crop: Shortcut(command: command, key: "c", modifiers: [])
+        case .grid: Shortcut(command: command, key: "g", modifiers: [])
+        case .inspector: Shortcut(command: command, key: "i", modifiers: [])
+        case .pin: Shortcut(command: command, key: "p", modifiers: [])
+        case .ocr: Shortcut(command: command, key: "r", modifiers: [.command, .shift])
+        }
+    }
 }
 
 public final class PreferencesStore {
@@ -91,6 +110,7 @@ public final class PreferencesStore {
         case pinOpacity = "preferences.pinOpacity"
         case cacheLimitMB = "preferences.cacheLimitMB"
         case clearsRecentItems = "preferences.clearsRecentItems"
+        case shortcuts = "preferences.shortcuts"
     }
 
     private let defaults: UserDefaults
@@ -177,6 +197,34 @@ public final class PreferencesStore {
         set { defaults.set(newValue, forKey: Key.clearsRecentItems.rawValue) }
     }
 
+    public var shortcuts: [Shortcut] {
+        guard let data = defaults.data(forKey: Key.shortcuts.rawValue),
+              let decoded = try? PropertyListDecoder().decode([Shortcut].self, from: data),
+              Self.validCommands(in: decoded) else {
+            return AppPreferences.defaultShortcuts
+        }
+        return decoded
+    }
+
+    public func shortcut(for command: ShortcutCommand) -> Shortcut {
+        shortcuts.first { $0.command == command }
+            ?? AppPreferences.defaultShortcut(for: command)
+    }
+
+    public func updateShortcuts(_ shortcuts: [Shortcut]) throws {
+        guard Self.validCommands(in: shortcuts),
+              shortcuts.allSatisfy({ !$0.key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+            throw ShortcutPreferencesError.invalid
+        }
+        guard ShortcutValidator.conflicts(in: shortcuts).isEmpty else {
+            throw ShortcutPreferencesError.conflict
+        }
+        defaults.set(
+            try PropertyListEncoder().encode(shortcuts),
+            forKey: Key.shortcuts.rawValue
+        )
+    }
+
     public func reset() {
         for key in Key.allCases {
             defaults.removeObject(forKey: key.rawValue)
@@ -188,5 +236,10 @@ public final class PreferencesStore {
             return defaultValue
         }
         return defaults.bool(forKey: key.rawValue)
+    }
+
+    private static func validCommands(in shortcuts: [Shortcut]) -> Bool {
+        Set(shortcuts.map(\.command)) == Set(ShortcutCommand.allCases)
+            && shortcuts.count == ShortcutCommand.allCases.count
     }
 }

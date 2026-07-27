@@ -83,6 +83,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         activeWindowController?.performOCR(sender)
     }
 
+    @objc private func beginCrop(_ sender: Any?) {
+        activeWindowController?.beginCrop(sender)
+    }
+
+    @objc private func toggleGrid(_ sender: Any?) {
+        activeWindowController?.toggleGrid(sender)
+    }
+
+    @objc private func toggleInspector(_ sender: Any?) {
+        activeWindowController?.toggleInspector(sender)
+    }
+
+    @objc private func pinCurrentImage(_ sender: Any?) {
+        activeWindowController?.pinCurrentImage(sender)
+    }
+
+    @objc private func printCurrentImage(_ sender: Any?) {
+        activeWindowController?.printCurrentImage(sender)
+    }
+
     @objc private func showPreferences(_ sender: Any?) {
         if let preferencesWindowController {
             preferencesWindowController.showWindow(nil)
@@ -92,6 +112,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let controller = PreferencesWindowController()
         controller.onLanguageChanged = { [weak self] in
             self?.reloadLanguage()
+        }
+        controller.onShortcutsChanged = { [weak self] in
+            self?.configureMainMenu()
         }
         preferencesWindowController = controller
         controller.showWindow(nil)
@@ -162,9 +185,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let openItem = fileMenu.addItem(
             withTitle: L10n.text("menu.open"),
             action: #selector(openDocument(_:)),
-            keyEquivalent: "o"
+            shortcut: .open
         )
         openItem.target = self
+        fileMenu.addItem(.separator())
+        let printItem = fileMenu.addItem(
+            withTitle: L10n.text("menu.print"),
+            action: #selector(printCurrentImage(_:)),
+            keyEquivalent: "p"
+        )
+        printItem.target = self
         fileMenu.addItem(.separator())
         fileMenu.addItem(
             withTitle: L10n.text("menu.close_window"),
@@ -191,10 +221,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let recognize = editMenu.addItem(
             withTitle: L10n.text("menu.recognize_text"),
             action: #selector(recognizeText(_:)),
-            keyEquivalent: "r"
+            shortcut: .ocr
         )
-        recognize.keyEquivalentModifierMask = [.command, .shift]
         recognize.target = self
+        let crop = editMenu.addItem(
+            withTitle: L10n.text("toolbar.crop"),
+            action: #selector(beginCrop(_:)),
+            shortcut: .crop
+        )
+        crop.target = self
+        let pin = editMenu.addItem(
+            withTitle: L10n.text("toolbar.pin"),
+            action: #selector(pinCurrentImage(_:)),
+            shortcut: .pin
+        )
+        pin.target = self
         editItem.submenu = editMenu
         mainMenu.addItem(editItem)
 
@@ -203,15 +244,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let previous = viewMenu.addItem(
             withTitle: L10n.text("menu.previous"),
             action: #selector(showPrevious(_:)),
-            keyEquivalent: String(Character(UnicodeScalar(NSLeftArrowFunctionKey)!))
+            shortcut: .previous
         )
         previous.target = self
         let next = viewMenu.addItem(
             withTitle: L10n.text("menu.next"),
             action: #selector(showNext(_:)),
-            keyEquivalent: String(Character(UnicodeScalar(NSRightArrowFunctionKey)!))
+            shortcut: .next
         )
         next.target = self
+        viewMenu.addItem(.separator())
+        let grid = viewMenu.addItem(
+            withTitle: L10n.text("toolbar.grid"),
+            action: #selector(toggleGrid(_:)),
+            shortcut: .grid
+        )
+        grid.target = self
+        let inspector = viewMenu.addItem(
+            withTitle: L10n.text("toolbar.info"),
+            action: #selector(toggleInspector(_:)),
+            shortcut: .inspector
+        )
+        inspector.target = self
         viewMenu.addItem(.separator())
         let fit = viewMenu.addItem(
             withTitle: L10n.text("menu.fit"),
@@ -235,5 +289,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(viewItem)
 
         NSApp.mainMenu = mainMenu
+    }
+}
+
+private extension NSMenu {
+    func addItem(
+        withTitle title: String,
+        action: Selector?,
+        shortcut command: ShortcutCommand
+    ) -> NSMenuItem {
+        let shortcut = PreferencesStore().shortcut(for: command)
+        let item = addItem(
+            withTitle: title,
+            action: action,
+            keyEquivalent: shortcut.key
+        )
+        item.keyEquivalentModifierMask = shortcut.modifiers.appKitFlags
+        return item
+    }
+}
+
+private extension ShortcutModifiers {
+    var appKitFlags: NSEvent.ModifierFlags {
+        var flags: NSEvent.ModifierFlags = []
+        if contains(.command) { flags.insert(.command) }
+        if contains(.option) { flags.insert(.option) }
+        if contains(.control) { flags.insert(.control) }
+        if contains(.shift) { flags.insert(.shift) }
+        return flags
     }
 }

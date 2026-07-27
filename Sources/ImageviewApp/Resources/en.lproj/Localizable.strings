@@ -4,6 +4,7 @@
 "menu.edit" = "Edit";
 "menu.view" = "View";
 "menu.open" = "Open…";
+"menu.print" = "Print…";
 "menu.close_window" = "Close Window";
 "menu.preferences" = "Settings…";
 "menu.copy" = "Copy";
@@ -95,4 +96,15 @@
 "preferences.cache_limit" = "Cache limit (MB)";
 "preferences.reset" = "Restore Defaults";
 "preferences.shortcuts_info" = "Open ⌘O · Previous ← · Next → · Crop C · Grid G · Info I · Pin P · OCR ⇧⌘R";
+"preferences.shortcut_error" = "Shortcut Not Saved";
+"preferences.shortcut_conflict" = "That shortcut is already assigned to another command.";
+"preferences.shortcut_invalid" = "Enter one key for every command.";
 "preferences.formats_info" = "JPEG, PNG, GIF, TIFF, BMP, HEIC/HEIF, PDF, EPS, ICO, ICNS, PSD, WebP, AVIF and system-supported RAW.";
+"shortcut.open" = "Open";
+"shortcut.previous" = "Previous Image";
+"shortcut.next" = "Next Image";
+"shortcut.crop" = "Crop";
+"shortcut.grid" = "Grid";
+"shortcut.inspector" = "Info";
+"shortcut.pin" = "Pin Image";
+"shortcut.ocr" = "Recognize Text";

@@ -217,6 +217,29 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         }
     }
 
+    @objc func printCurrentImage(_ sender: Any?) {
+        guard let image = try? session.renderedCurrentImage() else {
+            NSSound.beep()
+            return
+        }
+
+        let size = NSSize(width: image.width, height: image.height)
+        let imageView = NSImageView(frame: NSRect(origin: .zero, size: size))
+        imageView.image = NSImage(cgImage: image, size: size)
+        imageView.imageScaling = .scaleProportionallyDown
+        imageView.imageAlignment = .alignCenter
+
+        let printInfo = NSPrintInfo.shared.copy() as? NSPrintInfo ?? NSPrintInfo.shared
+        printInfo.horizontalPagination = .fit
+        printInfo.verticalPagination = .fit
+        printInfo.isHorizontallyCentered = true
+        printInfo.isVerticallyCentered = true
+        let operation = NSPrintOperation(view: imageView, printInfo: printInfo)
+        operation.showsPrintPanel = true
+        operation.showsProgressPanel = true
+        operation.run()
+    }
+
     func windowWillClose(_ notification: Notification) {
         session.cancel()
         ocrTask?.cancel()
