@@ -5,6 +5,8 @@
 "menu.view" = "View";
 "menu.open" = "Open…";
 "menu.open_recent" = "Open Recent";
+"menu.open_with" = "Open With";
+"menu.no_compatible_applications" = "No Compatible Applications";
 "menu.no_recent" = "No Recent Items";
 "menu.clear_recent" = "Clear Menu";
 "menu.print" = "Print…";
@@ -68,6 +70,7 @@
 "error.ocr_failed" = "Text Recognition Failed";
 "error.subject_failed" = "Subject Extraction Failed";
 "error.delete_failed" = "Delete Failed";
+"error.open_failed" = "Open Failed";
 "error.cannot_overwrite_title" = "Cannot Overwrite This Format";
 "error.cannot_overwrite_message" = "Use Save As to export JPEG, PNG, TIFF, or HEIC.";
 "confirm.overwrite_title" = "Overwrite Original Image?";

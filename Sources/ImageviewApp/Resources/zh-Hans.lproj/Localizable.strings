@@ -5,6 +5,8 @@
 "menu.view" = "显示";
 "menu.open" = "打开…";
 "menu.open_recent" = "最近打开";
+"menu.open_with" = "在其他应用中打开";
+"menu.no_compatible_applications" = "没有兼容的应用";
 "menu.no_recent" = "没有最近项目";
 "menu.clear_recent" = "清除菜单";
 "menu.print" = "打印…";
@@ -68,6 +70,7 @@
 "error.ocr_failed" = "文字识别失败";
 "error.subject_failed" = "主体提取失败";
 "error.delete_failed" = "删除失败";
+"error.open_failed" = "打开失败";
 "error.cannot_overwrite_title" = "无法覆盖此格式";
 "error.cannot_overwrite_message" = "请使用“另存为”导出 JPEG、PNG、TIFF 或 HEIC。";
 "confirm.overwrite_title" = "覆盖原始图片？";

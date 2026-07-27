@@ -6,6 +6,7 @@ final class ViewerWindowController:
     NSWindowController,
     NSWindowDelegate,
     NSToolbarDelegate,
+    NSMenuDelegate,
     NSMenuItemValidation,
     NSToolbarItemValidation
 {
@@ -42,6 +43,7 @@ final class ViewerWindowController:
     private let splitView = NSSplitView()
     private let session = ViewerSession()
     private var cropTransaction: CropTransaction?
+    private let openWithMenu = NSMenu()
     private var pinControllers: [PinboardWindowController] = []
     private var ocrTask: Task<Void, Never>?
     private var subjectTask: Task<Void, Never>?
@@ -290,6 +292,30 @@ final class ViewerWindowController:
             return
         }
         NSWorkspace.shared.open(url)
+    }
+
+    @objc private func openCurrentWithApplication(_ sender: NSMenuItem) {
+        guard let imageURL = session.snapshot.current?.url,
+              let applicationURL = sender.representedObject as? URL else {
+            return
+        }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.open(
+            [imageURL],
+            withApplicationAt: applicationURL,
+            configuration: configuration
+        ) { [weak self] _, error in
+            guard let error else {
+                return
+            }
+            Task { @MainActor in
+                self?.presentError(
+                    title: L10n.text("error.open_failed"),
+                    error: error
+                )
+            }
+        }
     }
 
     @objc func setFinderLabel(_ sender: Any?) {
@@ -778,6 +804,15 @@ final class ViewerWindowController:
                 action: #selector(openCurrentInDefaultApp(_:))
             )
         )
+        openWithMenu.title = L10n.text("menu.open_with")
+        openWithMenu.delegate = self
+        let openWithItem = NSMenuItem(
+            title: L10n.text("menu.open_with"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        openWithItem.submenu = openWithMenu
+        menu.addItem(openWithItem)
         menu.addItem(.separator())
         menu.addItem(
             contextMenuItem(
@@ -795,6 +830,9 @@ final class ViewerWindowController:
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.submenu === openWithMenu {
+            return session.snapshot.current != nil
+        }
         if menuItem.action == #selector(setSortOrder(_:)) {
             menuItem.state = menuItem.tag == sortTag(for: selectedSortOrder)
                 ? .on
@@ -827,6 +865,52 @@ final class ViewerWindowController:
             return session.snapshot.current != nil
         }
         return true
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu === openWithMenu else {
+            return
+        }
+        menu.removeAllItems()
+        guard let imageURL = session.snapshot.current?.url else {
+            addEmptyOpenWithItem(to: menu)
+            return
+        }
+
+        let rows = OpenWithApplications.rows(
+            from: NSWorkspace.shared.urlsForApplications(toOpen: imageURL),
+            excluding: Bundle.main.bundleURL
+        ) {
+            FileManager.default.displayName(atPath: $0.path)
+        }
+        guard !rows.isEmpty else {
+            addEmptyOpenWithItem(to: menu)
+            return
+        }
+
+        for row in rows {
+            let item = NSMenuItem(
+                title: row.displayName,
+                action: #selector(openCurrentWithApplication(_:)),
+                keyEquivalent: ""
+            )
+            let icon = NSWorkspace.shared.icon(forFile: row.url.path)
+            icon.size = NSSize(width: 16, height: 16)
+            item.image = icon
+            item.representedObject = row.url
+            item.target = self
+            menu.addItem(item)
+        }
+    }
+
+    private func addEmptyOpenWithItem(to menu: NSMenu) {
+        let item = NSMenuItem(
+            title: L10n.text("menu.no_compatible_applications"),
+            action: nil,
+            keyEquivalent: ""
+        )
+        item.isEnabled = false
+        menu.addItem(item)
     }
 
     private func contextMenuItem(_ title: String, action: Selector) -> NSMenuItem {

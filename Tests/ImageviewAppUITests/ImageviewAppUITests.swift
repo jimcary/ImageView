@@ -116,7 +116,7 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertEqual(contextMenu.menuItems.allElementsBoundByIndex.map { $0.title }, [
             "Recognize Text", "Actual Size", "Fit to Window", "Sort",
             "Image Processing", "Finder Label", "Pin to Desktop",
-            "Show in Finder", "Open Default", "Copy", "Delete",
+            "Show in Finder", "Open Default", "Open With", "Copy", "Delete",
         ])
 
         let sortItem = contextMenu.menuItems["Sort"]
@@ -128,6 +128,14 @@ final class ImageviewAppUITests: XCTestCase {
             "Finder Order", "Random", "Finder Label",
         ])
         sortMenu.menuItems["Extension"].click()
+
+        canvas.rightClick()
+        let openWithItem = app.menus["imageCanvasContextMenu"].menuItems["Open With"]
+        openWithItem.hover()
+        let openWithMenu = openWithItem.menus.firstMatch
+        XCTAssertTrue(openWithMenu.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(openWithMenu.menuItems.count, 0)
+        app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
 
         app.toolbars.buttons["Grid"].click()
         XCTAssertEqual(app.popUpButtons.firstMatch.value as? String, "Extension")
