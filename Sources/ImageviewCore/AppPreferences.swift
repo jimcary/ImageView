@@ -14,6 +14,8 @@ public enum ShortcutCommand: String, CaseIterable, Codable, Sendable {
     case delete
     case grid
     case inspector
+    case rotateLeft
+    case rotateRight
     case pin
     case ocr
 }
@@ -95,6 +97,8 @@ public enum AppPreferences {
         case .delete: Shortcut(command: command, key: "\u{7F}", modifiers: [])
         case .grid: Shortcut(command: command, key: "g", modifiers: [])
         case .inspector: Shortcut(command: command, key: "i", modifiers: [])
+        case .rotateLeft: Shortcut(command: command, key: "l", modifiers: [.command])
+        case .rotateRight: Shortcut(command: command, key: "r", modifiers: [.command])
         case .pin: Shortcut(command: command, key: "p", modifiers: [])
         case .ocr: Shortcut(command: command, key: "r", modifiers: [.command, .shift])
         }

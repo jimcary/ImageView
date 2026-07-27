@@ -18,7 +18,7 @@ func duplicateShortcutReportsBothCommands() {
 }
 
 @Test
-func cropAndDeleteUseTheRequestedDefaultShortcuts() {
+func requestedCommandsUseTheDocumentedDefaultShortcuts() {
     #expect(
         AppPreferences.defaultShortcut(for: .crop)
             == Shortcut(command: .crop, key: "k", modifiers: [.command])
@@ -26,6 +26,14 @@ func cropAndDeleteUseTheRequestedDefaultShortcuts() {
     #expect(
         AppPreferences.defaultShortcut(for: .delete)
             == Shortcut(command: .delete, key: "\u{7F}", modifiers: [])
+    )
+    #expect(
+        AppPreferences.defaultShortcut(for: .rotateLeft)
+            == Shortcut(command: .rotateLeft, key: "l", modifiers: [.command])
+    )
+    #expect(
+        AppPreferences.defaultShortcut(for: .rotateRight)
+            == Shortcut(command: .rotateRight, key: "r", modifiers: [.command])
     )
 }
 

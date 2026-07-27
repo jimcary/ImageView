@@ -97,6 +97,14 @@ final class AppDelegate:
         activeWindowController?.showActualSize(sender)
     }
 
+    @objc private func rotateLeft(_ sender: Any?) {
+        keyWindowController?.rotateLeft(sender)
+    }
+
+    @objc private func rotateRight(_ sender: Any?) {
+        keyWindowController?.rotateRight(sender)
+    }
+
     @objc private func pinClipboard(_ sender: Any?) {
         activeWindowController?.pinClipboard(sender)
     }
@@ -323,6 +331,19 @@ final class AppDelegate:
         )
         actual.target = self
         viewMenu.addItem(.separator())
+        let rotateLeft = viewMenu.addItem(
+            withTitle: L10n.text("toolbar.rotate_left"),
+            action: #selector(rotateLeft(_:)),
+            shortcut: .rotateLeft
+        )
+        rotateLeft.target = self
+        let rotateRight = viewMenu.addItem(
+            withTitle: L10n.text("toolbar.rotate_right"),
+            action: #selector(rotateRight(_:)),
+            shortcut: .rotateRight
+        )
+        rotateRight.target = self
+        viewMenu.addItem(.separator())
         viewMenu.addItem(
             withTitle: L10n.text("menu.full_screen"),
             action: #selector(NSWindow.toggleFullScreen(_:)),
@@ -373,6 +394,8 @@ final class AppDelegate:
             keyWindowController?.hasCurrentItem == true
         case #selector(commitCropAndOverwrite(_:)):
             keyWindowController?.canCommitCrop == true
+        case #selector(rotateLeft(_:)), #selector(rotateRight(_:)):
+            keyWindowController?.hasCurrentItem == true
         default:
             true
         }

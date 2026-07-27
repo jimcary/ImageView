@@ -141,5 +141,7 @@
 "shortcut.delete" = "删除";
 "shortcut.grid" = "网格";
 "shortcut.inspector" = "信息";
+"shortcut.rotateLeft" = "向左旋转";
+"shortcut.rotateRight" = "向右旋转";
 "shortcut.pin" = "贴图";
 "shortcut.ocr" = "识别文字";

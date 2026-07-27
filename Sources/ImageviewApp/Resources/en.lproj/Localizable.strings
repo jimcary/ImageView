@@ -141,5 +141,7 @@
 "shortcut.delete" = "Delete";
 "shortcut.grid" = "Grid";
 "shortcut.inspector" = "Info";
+"shortcut.rotateLeft" = "Rotate Left";
+"shortcut.rotateRight" = "Rotate Right";
 "shortcut.pin" = "Pin Image";
 "shortcut.ocr" = "Recognize Text";
