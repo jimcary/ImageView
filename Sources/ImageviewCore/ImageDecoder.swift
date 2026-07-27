@@ -3,7 +3,7 @@ import CoreImage
 import Foundation
 import ImageIO
 
-public struct DecodedImage {
+public struct DecodedImage: @unchecked Sendable {
     public let image: CGImage
     public let properties: [CFString: Any]
     public let frameCount: Int
