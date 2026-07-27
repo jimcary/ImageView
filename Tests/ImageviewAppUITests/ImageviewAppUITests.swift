@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 import XCTest
 
 final class ImageviewAppUITests: XCTestCase {
@@ -50,12 +51,39 @@ final class ImageviewAppUITests: XCTestCase {
     func testCropSelectionAndCommandKOverwriteOriginal() {
         let canvas = app.otherElements["imageCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        let originalURL = fixturesURL.appendingPathComponent("blue.jpg")
+        guard let originalSize = decodedPixelSize(at: originalURL) else {
+            return XCTFail("Expected the JPEG fixture to decode before cropping")
+        }
         app.toolbars.buttons["Crop"].click()
         let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.25))
         let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.75))
         start.press(forDuration: 0.1, thenDragTo: end)
         app.typeKey("k", modifierFlags: .command)
-        XCTAssertFalse(app.windows["Crop"].exists)
+        guard let croppedSize = waitForDecodedPixelSize(
+            at: originalURL,
+            smallerThan: originalSize
+        ) else {
+            return XCTFail("Expected Command-K to overwrite blue.jpg with a decodable crop")
+        }
+        XCTAssertLessThan(croppedSize.width, originalSize.width)
+        XCTAssertLessThan(croppedSize.height, originalSize.height)
+    }
+
+    func testRepeatedCropEntryKeepsTheOriginalRollbackBaseline() {
+        let canvas = app.otherElements["imageCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        app.toolbars.buttons["Crop"].click()
+        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.25))
+        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.75))
+        start.press(forDuration: 0.1, thenDragTo: end)
+        app.toolbars.buttons["Crop"].click()
+        app.typeKey(XCUIKeyboardKey.escape, modifierFlags: [])
+        app.toolbars.buttons["Pin Image"].click()
+
+        let pin = app.windows["Image Pin"]
+        XCTAssertTrue(pin.waitForExistence(timeout: 5))
+        XCTAssertGreaterThan(pin.frame.width, 500)
     }
 
     func testPinCreatesFloatingImageWindow() {
@@ -83,7 +111,12 @@ final class ImageviewAppUITests: XCTestCase {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("imageview-ui-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        try writeJPEG(named: "blue.jpg", color: .systemBlue, to: directory)
+        try writeJPEG(
+            named: "blue.jpg",
+            color: .systemBlue,
+            size: NSSize(width: 800, height: 600),
+            to: directory
+        )
         try writePNG(named: "green.png", color: .systemGreen, to: directory)
         try writePNG(named: "red.png", color: .systemRed, to: directory)
         try Data("not an image".utf8).write(to: directory.appendingPathComponent("middle.png"))
@@ -102,11 +135,16 @@ final class ImageviewAppUITests: XCTestCase {
         try data.write(to: directory.appendingPathComponent(name))
     }
 
-    private func writeJPEG(named name: String, color: NSColor, to directory: URL) throws {
-        let image = NSImage(size: NSSize(width: 24, height: 24))
+    private func writeJPEG(
+        named name: String,
+        color: NSColor,
+        size: NSSize,
+        to directory: URL
+    ) throws {
+        let image = NSImage(size: size)
         image.lockFocus()
         color.setFill()
-        NSBezierPath(rect: NSRect(x: 0, y: 0, width: 24, height: 24)).fill()
+        NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
         image.unlockFocus()
 
         let bitmap = NSBitmapImageRep(data: image.tiffRepresentation!)!
@@ -115,6 +153,27 @@ final class ImageviewAppUITests: XCTestCase {
             properties: [.compressionFactor: 0.9]
         )!
         try data.write(to: directory.appendingPathComponent(name))
+    }
+
+    private func decodedPixelSize(at url: URL) -> CGSize? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, nil) else {
+            return nil
+        }
+        return CGSize(width: image.width, height: image.height)
+    }
+
+    private func waitForDecodedPixelSize(at url: URL, smallerThan original: CGSize) -> CGSize? {
+        let deadline = Date().addingTimeInterval(5)
+        repeat {
+            if let size = decodedPixelSize(at: url),
+               size.width < original.width,
+               size.height < original.height {
+                return size
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        return nil
     }
 
     private func configuredAppURL() throws -> URL {

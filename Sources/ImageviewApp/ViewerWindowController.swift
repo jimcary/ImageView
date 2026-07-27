@@ -141,6 +141,10 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     }
 
     @objc func beginCrop(_ sender: Any?) {
+        if canvas.isCropMode {
+            window?.makeFirstResponder(canvas)
+            return
+        }
         guard session.snapshot.image != nil else {
             NSSound.beep()
             return
