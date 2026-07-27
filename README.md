@@ -15,6 +15,14 @@ To check a freshly built bundle:
 ./scripts/smoke-test.sh
 ```
 
+Run the Xcode UI tests against that exact local app bundle:
+
+```bash
+./scripts/run-ui-tests.sh
+```
+
+The script builds `dist/Imageview.app`, passes its absolute path as `IMAGEVIEW_APP_PATH`, and invokes the shared `ImageviewAppUITests` scheme. The UI tests preserve any existing Imageview preferences: each test starts with a clean English baseline and restores the previous preference domain afterward.
+
 Open an image, several images, or a folder from Finder, or pass it directly to the app:
 
 ```bash

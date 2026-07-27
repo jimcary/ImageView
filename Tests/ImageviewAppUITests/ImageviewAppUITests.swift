@@ -2,21 +2,31 @@ import AppKit
 import XCTest
 
 final class ImageviewAppUITests: XCTestCase {
+    private static let appBundleIdentifier = "com.local.Imageview"
     private var app: XCUIApplication!
+    private var appURL: URL!
     private var fixturesURL: URL!
+    private var originalDefaults: [String: Any]?
 
     override func setUpWithError() throws {
         continueAfterFailure = false
+        originalDefaults = UserDefaults.standard.persistentDomain(
+            forName: Self.appBundleIdentifier
+        )
+        resetPreferences(language: "en")
         fixturesURL = try makeFixtures()
-        app = XCUIApplication(bundleIdentifier: "com.local.Imageview")
-        app.launchArguments = [fixturesURL.path]
-        app.launch()
+        appURL = try configuredAppURL()
+        app = XCUIApplication(bundleIdentifier: Self.appBundleIdentifier)
+        launchApp()
         XCTAssertTrue(app.windows["Imageview"].waitForExistence(timeout: 5))
     }
 
     override func tearDownWithError() throws {
-        app.terminate()
-        try FileManager.default.removeItem(at: fixturesURL)
+        app?.terminate()
+        if let fixturesURL {
+            try? FileManager.default.removeItem(at: fixturesURL)
+        }
+        restorePreferences()
     }
 
     func testOpenFolderAndNavigateNextAndPrevious() {
@@ -59,12 +69,10 @@ final class ImageviewAppUITests: XCTestCase {
     }
 
     func testLanguagePreferencePersistsAcrossLaunches() {
-        let defaults = UserDefaults(suiteName: "com.local.Imageview")!
-        defaults.set("zh-Hans", forKey: "preferences.language")
-        defaults.synchronize()
+        resetPreferences(language: "zh-Hans")
 
         app.terminate()
-        app.launch()
+        launchApp()
         app.toolbars.buttons["Crop"].click()
         XCTAssertTrue(app.windows["裁剪"].waitForExistence(timeout: 5))
     }
@@ -98,5 +106,49 @@ final class ImageviewAppUITests: XCTestCase {
         let bitmap = NSBitmapImageRep(data: image.tiffRepresentation!)!
         let data = bitmap.representation(using: .png, properties: [:])!
         try data.write(to: directory.appendingPathComponent(name))
+    }
+
+    private func configuredAppURL() throws -> URL {
+        guard let path = ProcessInfo.processInfo.environment["IMAGEVIEW_APP_PATH"],
+              !path.isEmpty else {
+            throw XCTSkip("IMAGEVIEW_APP_PATH must point to dist/Imageview.app")
+        }
+        let url = URL(fileURLWithPath: path, isDirectory: true)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw XCTSkip("Imageview app is not built at \(url.path)")
+        }
+        return url
+    }
+
+    private func launchApp() {
+        guard let fixturesURL, let appURL else {
+            XCTFail("Imageview UI test was not configured")
+            return
+        }
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.open(
+            [fixturesURL],
+            withApplicationAt: appURL,
+            configuration: configuration
+        )
+    }
+
+    private func resetPreferences(language: String) {
+        UserDefaults.standard.removePersistentDomain(forName: Self.appBundleIdentifier)
+        UserDefaults.standard.setPersistentDomain(
+            ["preferences.language": language],
+            forName: Self.appBundleIdentifier
+        )
+    }
+
+    private func restorePreferences() {
+        UserDefaults.standard.removePersistentDomain(forName: Self.appBundleIdentifier)
+        if let originalDefaults {
+            UserDefaults.standard.setPersistentDomain(
+                originalDefaults,
+                forName: Self.appBundleIdentifier
+            )
+        }
     }
 }

@@ -1,0 +1,173 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A11E00000000000000000001 /* ImageviewAppUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A11E00000000000000000002 /* ImageviewAppUITests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A11E00000000000000000002 /* ImageviewAppUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageviewAppUITests.swift; sourceTree = "<group>"; };
+		A11E00000000000000000003 /* ImageviewAppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ImageviewAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		A11E00000000000000000004 = {
+			isa = PBXGroup;
+			children = (
+				A11E00000000000000000005 /* Tests */,
+				A11E00000000000000000006 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A11E00000000000000000005 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				A11E00000000000000000002 /* ImageviewAppUITests.swift */,
+			);
+			name = Tests;
+			path = Tests/ImageviewAppUITests;
+			sourceTree = "<group>";
+		};
+		A11E00000000000000000006 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A11E00000000000000000003 /* ImageviewAppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A11E00000000000000000007 /* ImageviewAppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A11E00000000000000000008 /* Build configuration list for PBXNativeTarget "ImageviewAppUITests" */;
+			buildPhases = (
+				A11E00000000000000000009 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ImageviewAppUITests;
+			productName = ImageviewAppUITests;
+			productReference = A11E00000000000000000003 /* ImageviewAppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A11E00000000000000000010 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 2630;
+			};
+			buildConfigurationList = A11E00000000000000000011 /* Build configuration list for PBXProject "Imageview" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				"zh-Hans",
+			);
+			mainGroup = A11E00000000000000000004;
+			productRefGroup = A11E00000000000000000006 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A11E00000000000000000007 /* ImageviewAppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A11E00000000000000000009 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A11E00000000000000000001 /* ImageviewAppUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A11E00000000000000000012 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		A11E00000000000000000013 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		A11E00000000000000000014 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.local.Imageview.uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A11E00000000000000000015 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(NATIVE_ARCH_ACTUAL)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.local.Imageview.uitests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A11E00000000000000000008 /* Build configuration list for PBXNativeTarget "ImageviewAppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A11E00000000000000000014 /* Debug */,
+				A11E00000000000000000015 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A11E00000000000000000011 /* Build configuration list for PBXProject "Imageview" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A11E00000000000000000012 /* Debug */,
+				A11E00000000000000000013 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A11E00000000000000000010 /* Project object */;
+}
