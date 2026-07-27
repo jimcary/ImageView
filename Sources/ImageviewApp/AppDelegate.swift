@@ -2,10 +2,11 @@ import AppKit
 import ImageviewCore
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let startupURLs: [URL]
     private var windowControllers: [ViewerWindowController] = []
     private var preferencesWindowController: PreferencesWindowController?
+    private var recentMenu: NSMenu?
 
     private var activeWindowController: ViewerWindowController? {
         windowControllers.first(where: { $0.window?.isKeyWindow == true })
@@ -24,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
+        recordRecent(urls)
         if PreferencesStore().singleWindow, let controller = activeWindowController {
             controller.open(urls: urls)
         } else {
@@ -57,6 +59,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openDocument(_ sender: Any?) {
         activeWindowController?.chooseFiles(sender)
+    }
+
+    @objc private func openRecent(_ sender: NSMenuItem) {
+        guard let url = sender.representedObject as? URL else {
+            return
+        }
+        application(NSApp, open: [url])
+    }
+
+    @objc private func clearRecent(_ sender: Any?) {
+        NSDocumentController.shared.clearRecentDocuments(sender)
     }
 
     @objc private func showPrevious(_ sender: Any?) {
@@ -139,6 +152,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @discardableResult
     private func makeViewer(urls: [URL]) -> ViewerWindowController {
+        recordRecent(urls)
         let controller = ViewerWindowController(urls: urls)
         controller.onClose = { [weak self, weak controller] in
             guard let controller else { return }
@@ -146,6 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         controller.onOpenURLsRequested = { [weak self, weak controller] urls in
             guard let self else { return }
+            self.recordRecent(urls)
             if PreferencesStore().singleWindow, let controller {
                 controller.open(urls: urls)
             } else {
@@ -191,6 +206,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             shortcut: .open
         )
         openItem.target = self
+        let recentItem = NSMenuItem(title: L10n.text("menu.open_recent"), action: nil, keyEquivalent: "")
+        let recentMenu = NSMenu(title: L10n.text("menu.open_recent"))
+        recentMenu.delegate = self
+        recentItem.submenu = recentMenu
+        self.recentMenu = recentMenu
+        fileMenu.addItem(recentItem)
         fileMenu.addItem(.separator())
         let printItem = fileMenu.addItem(
             withTitle: L10n.text("menu.print"),
@@ -292,6 +313,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(viewItem)
 
         NSApp.mainMenu = mainMenu
+    }
+
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        guard menu === recentMenu else {
+            return
+        }
+        menu.removeAllItems()
+        let urls = NSDocumentController.shared.recentDocumentURLs
+        if urls.isEmpty {
+            let empty = menu.addItem(
+                withTitle: L10n.text("menu.no_recent"),
+                action: nil,
+                keyEquivalent: ""
+            )
+            empty.isEnabled = false
+        } else {
+            for url in urls {
+                let item = menu.addItem(
+                    withTitle: url.lastPathComponent,
+                    action: #selector(openRecent(_:)),
+                    keyEquivalent: ""
+                )
+                item.representedObject = url
+                item.target = self
+            }
+            menu.addItem(.separator())
+            let clear = menu.addItem(
+                withTitle: L10n.text("menu.clear_recent"),
+                action: #selector(clearRecent(_:)),
+                keyEquivalent: ""
+            )
+            clear.target = self
+        }
+    }
+
+    private func recordRecent(_ urls: [URL]) {
+        for url in urls {
+            NSDocumentController.shared.noteNewRecentDocumentURL(url)
+        }
     }
 }
 

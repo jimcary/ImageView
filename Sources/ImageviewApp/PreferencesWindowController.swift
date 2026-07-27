@@ -15,6 +15,8 @@ final class PreferencesWindowController: NSWindowController {
     private let recursiveButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let wrapButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
     private let showsThumbnailsButton = NSButton(checkboxWithTitle: "", target: nil, action: nil)
+    private let slideshowSlider = NSSlider(value: 3, minValue: 1, maxValue: 30, target: nil, action: nil)
+    private let slideshowValue = NSTextField(labelWithString: "")
     private let thumbnailSlider = NSSlider(value: 96, minValue: 48, maxValue: 320, target: nil, action: nil)
     private let thumbnailValue = NSTextField(labelWithString: "")
     private let pinOpacitySlider = NSSlider(value: 1, minValue: 0.1, maxValue: 1, target: nil, action: nil)
@@ -66,6 +68,8 @@ final class PreferencesWindowController: NSWindowController {
         pinOpacitySlider.action = #selector(pinOpacityChanged(_:))
         cacheSlider.target = self
         cacheSlider.action = #selector(cacheLimitChanged(_:))
+        slideshowSlider.target = self
+        slideshowSlider.action = #selector(slideshowIntervalChanged(_:))
     }
 
     private func configure(_ button: NSButton, action: Selector, tag: Int) {
@@ -92,6 +96,11 @@ final class PreferencesWindowController: NSWindowController {
             rows: [
                 titled(recursiveButton, L10n.text("preferences.recursive")),
                 titled(wrapButton, L10n.text("preferences.wrap")),
+                sliderRow(
+                    label: L10n.text("preferences.slideshow_interval"),
+                    slider: slideshowSlider,
+                    value: slideshowValue
+                ),
             ]
         ))
         tabController.addChild(tab(
@@ -208,6 +217,7 @@ final class PreferencesWindowController: NSWindowController {
         clearRecentButton.state = preferences.clearsRecentItems ? .on : .off
         recursiveButton.state = preferences.recursiveScan ? .on : .off
         wrapButton.state = preferences.wrapsNavigation ? .on : .off
+        slideshowSlider.doubleValue = preferences.slideshowInterval
         showsThumbnailsButton.state = preferences.showsThumbnails ? .on : .off
         thumbnailSlider.integerValue = preferences.thumbnailSize
         pinOpacitySlider.doubleValue = preferences.pinOpacity
@@ -220,6 +230,10 @@ final class PreferencesWindowController: NSWindowController {
         thumbnailValue.stringValue = "\(thumbnailSlider.integerValue) px"
         pinOpacityValue.stringValue = "\(Int(pinOpacitySlider.doubleValue * 100))%"
         cacheValue.stringValue = "\(cacheSlider.integerValue) MB"
+        slideshowValue.stringValue = String(
+            format: L10n.text("preferences.seconds_format"),
+            slideshowSlider.doubleValue
+        )
     }
 
     @objc private func languageChanged(_ sender: Any?) {
@@ -259,6 +273,12 @@ final class PreferencesWindowController: NSWindowController {
 
     @objc private func cacheLimitChanged(_ sender: NSSlider) {
         preferences.cacheLimitMB = sender.integerValue
+        updateValueLabels()
+        onPreferencesChanged?()
+    }
+
+    @objc private func slideshowIntervalChanged(_ sender: NSSlider) {
+        preferences.slideshowInterval = sender.doubleValue
         updateValueLabels()
         onPreferencesChanged?()
     }

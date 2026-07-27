@@ -10,11 +10,16 @@ final class ViewerSession {
         let image: CGImage?
         let sourceProperties: [CFString: Any]?
         let recipe: EditRecipe
+        let playbackKind: MediaPlaybackKind
+        let subimageIndex: Int
+        let subimageCount: Int
+        let isSlideshowRunning: Bool
         let isLoading: Bool
         let errorMessage: String?
     }
 
     var onChange: ((Snapshot) -> Void)?
+    var onFrame: ((CGImage) -> Void)?
 
     private var index = MediaIndex(items: [])
     private let preferences: PreferencesStore
@@ -24,21 +29,27 @@ final class ViewerSession {
     private var recipe = EditRecipe()
     private var generation = DecodeGeneration()
     private var decodeTask: Task<Void, Never>?
+    private var framePlaybackTask: Task<Void, Never>?
+    private var slideshowTask: Task<Void, Never>?
     private var prefetchTasks: [Task<Void, Never>] = []
     private var folderMonitor: FolderMonitor?
-    private var cache: CostCache<String, DecodedImage>
-    private var protectedCacheKey: String?
+    private var cache: CostCache<MediaSubimageKey, DecodedImage>
+    private var protectedCacheKey: MediaSubimageKey?
     private var sessionFolder: URL?
     private var sessionRecursive = false
     private var usesRecursivePreference = false
     private var sortOrder: MediaSortOrder = .name
     private var memoryPressureSource: DispatchSourceMemoryPressure?
+    private var playbackKind: MediaPlaybackKind = .still
+    private var subimageIndex = 0
+    private var subimageCount = 1
+    private var isSlideshowRunning = false
     private var isLoading = false
     private var errorMessage: String?
 
     init(preferences: PreferencesStore = PreferencesStore()) {
         self.preferences = preferences
-        cache = CostCache<String, DecodedImage>(
+        cache = CostCache<MediaSubimageKey, DecodedImage>(
             costLimit: preferences.cacheLimitMB * 1_024 * 1_024
         )
         let pressureSource = DispatchSource.makeMemoryPressureSource(
@@ -62,6 +73,10 @@ final class ViewerSession {
             image: displayedImage,
             sourceProperties: sourceImage?.properties,
             recipe: recipe,
+            playbackKind: playbackKind,
+            subimageIndex: subimageIndex,
+            subimageCount: subimageCount,
+            isSlideshowRunning: isSlideshowRunning,
             isLoading: isLoading,
             errorMessage: errorMessage
         )
@@ -136,6 +151,7 @@ final class ViewerSession {
     }
 
     func move(_ direction: NavigationDirection) {
+        stopFramePlayback()
         guard index.move(direction, wraps: preferences.wrapsNavigation) != nil else {
             return
         }
@@ -143,8 +159,46 @@ final class ViewerSession {
     }
 
     func select(id: MediaItem.ID) {
+        stopFramePlayback()
         index.select(id: id)
         decodeCurrent()
+    }
+
+    func moveSubimage(_ delta: Int) {
+        guard playbackKind == .document, subimageCount > 1 else {
+            return
+        }
+        let target = min(max(subimageIndex + delta, 0), subimageCount - 1)
+        guard target != subimageIndex else {
+            return
+        }
+        decodeSubimage(at: target)
+    }
+
+    func toggleSlideshow(interval: TimeInterval? = nil) {
+        if isSlideshowRunning {
+            stopSlideshow()
+            publish()
+            return
+        }
+        isSlideshowRunning = true
+        let delay = max(interval ?? preferences.slideshowInterval, 1)
+        slideshowTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(
+                        nanoseconds: UInt64(delay * 1_000_000_000)
+                    )
+                } catch {
+                    return
+                }
+                guard let self, !Task.isCancelled else {
+                    return
+                }
+                self.advanceSlideshow()
+            }
+        }
+        publish()
     }
 
     func refreshCurrentFolder() {
@@ -205,12 +259,12 @@ final class ViewerSession {
         format: ExportFormat,
         metadataPolicy: MetadataPolicy
     ) throws {
-        guard let sourceURL = index.current?.url else {
+        guard index.current != nil else {
             throw ImageDecodeError.cannotOpen
         }
-        try CropSaveWorkflow().save(
-            sourceURL: sourceURL,
-            recipe: recipe,
+        try ExportCoordinator().saveAs(
+            image: renderedCurrentImage(),
+            sourceProperties: sourceImage?.properties,
             destinationURL: destinationURL,
             format: format,
             metadataPolicy: metadataPolicy
@@ -225,9 +279,10 @@ final class ViewerSession {
         guard let sourceURL = index.current?.url else {
             throw ImageDecodeError.cannotOpen
         }
-        try CropSaveWorkflow().overwrite(
-            sourceURL: sourceURL,
-            recipe: recipe,
+        try ExportCoordinator().overwrite(
+            image: renderedCurrentImage(),
+            sourceProperties: sourceImage?.properties,
+            originalURL: sourceURL,
             format: format,
             metadataPolicy: metadataPolicy
         )
@@ -236,6 +291,8 @@ final class ViewerSession {
 
     func cancel() {
         decodeTask?.cancel()
+        stopFramePlayback()
+        stopSlideshow()
         prefetchTasks.forEach { $0.cancel() }
         prefetchTasks.removeAll()
         folderMonitor?.stop()
@@ -268,12 +325,16 @@ final class ViewerSession {
 
     private func decodeCurrent() {
         decodeTask?.cancel()
+        stopFramePlayback()
         prefetchTasks.forEach { $0.cancel() }
         prefetchTasks.removeAll()
 
         guard let current = index.current else {
             sourceImage = nil
             displayedImage = nil
+            playbackKind = .still
+            subimageIndex = 0
+            subimageCount = 1
             errorMessage = nil
             isLoading = false
             publish()
@@ -281,10 +342,11 @@ final class ViewerSession {
         }
 
         recipe = EditRecipe()
+        subimageIndex = 0
         errorMessage = nil
         isLoading = true
         let currentGeneration = generation.begin()
-        let cacheKey = current.id
+        let cacheKey = MediaSubimageKey(mediaID: current.id, index: 0)
 
         if let cached = cache.value(for: cacheKey) {
             accept(cached, for: cacheKey, generation: currentGeneration)
@@ -295,7 +357,7 @@ final class ViewerSession {
         let url = current.url
         decodeTask = Task { [weak self] in
             let result = await Task.detached(priority: .userInitiated) {
-                Result { try ImageDecoder().decode(url: url) }
+                Result { try ImageDecoder().decode(url: url, page: 0) }
             }.value
             guard let self, !Task.isCancelled,
                   self.generation.isCurrent(currentGeneration) else {
@@ -318,7 +380,7 @@ final class ViewerSession {
 
     private func accept(
         _ decoded: DecodedImage,
-        for cacheKey: String,
+        for cacheKey: MediaSubimageKey,
         generation currentGeneration: UInt64
     ) {
         guard generation.isCurrent(currentGeneration) else {
@@ -332,9 +394,15 @@ final class ViewerSession {
         protectedCacheKey = cacheKey
         sourceImage = decoded
         displayedImage = decoded.image
+        playbackKind = decoded.playbackKind
+        subimageIndex = decoded.index
+        subimageCount = decoded.frameCount
         isLoading = false
         errorMessage = nil
         publish()
+        if decoded.playbackKind == .animation {
+            scheduleNextAnimationFrame(after: decoded, generation: currentGeneration)
+        }
     }
 
     private func renderRecipe() {
@@ -360,7 +428,8 @@ final class ViewerSession {
             .map { index.items[$0] }
             .filter { item in
                 var mutableCache = cache
-                return mutableCache.value(for: item.id) == nil
+                let key = MediaSubimageKey(mediaID: item.id, index: 0)
+                return mutableCache.value(for: key) == nil
             }
 
         for item in candidates {
@@ -373,10 +442,129 @@ final class ViewerSession {
                     return
                 }
                 let cost = decoded.image.bytesPerRow * decoded.image.height
-                self.cache.insert(decoded, for: item.id, cost: cost)
+                let key = MediaSubimageKey(mediaID: item.id, index: 0)
+                self.cache.insert(decoded, for: key, cost: cost)
             }
             prefetchTasks.append(task)
         }
+    }
+
+    private func decodeSubimage(at targetIndex: Int) {
+        guard let current = index.current else {
+            return
+        }
+        stopFramePlayback()
+        decodeTask?.cancel()
+        errorMessage = nil
+        isLoading = true
+        let currentGeneration = generation.begin()
+        let cacheKey = MediaSubimageKey(mediaID: current.id, index: targetIndex)
+        if let cached = cache.value(for: cacheKey) {
+            accept(cached, for: cacheKey, generation: currentGeneration)
+            return
+        }
+
+        let url = current.url
+        decodeTask = Task { [weak self] in
+            let result = await Task.detached(priority: .userInitiated) {
+                Result { try ImageDecoder().decode(url: url, page: targetIndex) }
+            }.value
+            guard let self, !Task.isCancelled,
+                  self.generation.isCurrent(currentGeneration) else {
+                return
+            }
+            switch result {
+            case let .success(decoded):
+                self.accept(decoded, for: cacheKey, generation: currentGeneration)
+            case let .failure(error):
+                self.isLoading = false
+                self.errorMessage = error.localizedDescription
+                self.publish()
+            }
+        }
+        publish()
+    }
+
+    private func scheduleNextAnimationFrame(
+        after currentFrame: DecodedImage,
+        generation currentGeneration: UInt64
+    ) {
+        guard let current = index.current, currentFrame.frameCount > 1 else {
+            return
+        }
+        let mediaID = current.id
+        let url = current.url
+        let nextIndex = FramePlaybackPolicy.nextFrame(
+            after: currentFrame.index,
+            frameCount: currentFrame.frameCount
+        )
+        let delay = FramePlaybackPolicy.safeDelay(currentFrame.duration)
+        framePlaybackTask = Task { [weak self] in
+            async let decodedResult = Task.detached(priority: .utility) {
+                Result { try ImageDecoder().decode(url: url, page: nextIndex) }
+            }.value
+            do {
+                try await Task.sleep(
+                    nanoseconds: UInt64(delay * 1_000_000_000)
+                )
+            } catch {
+                return
+            }
+            let result = await decodedResult
+            guard let self, !Task.isCancelled,
+                  self.generation.isCurrent(currentGeneration),
+                  self.index.current?.id == mediaID,
+                  case let .success(decoded) = result else {
+                return
+            }
+            let key = MediaSubimageKey(mediaID: mediaID, index: decoded.index)
+            if let protectedCacheKey = self.protectedCacheKey {
+                self.cache.protect(protectedCacheKey, false)
+            }
+            let cost = decoded.image.bytesPerRow * decoded.image.height
+            self.cache.insert(decoded, for: key, cost: cost, protected: true)
+            self.protectedCacheKey = key
+            self.sourceImage = decoded
+            self.subimageIndex = decoded.index
+            do {
+                let rendered = try ImageRenderer().render(decoded.image, recipe: self.recipe)
+                self.displayedImage = rendered
+                self.onFrame?(rendered)
+            } catch {
+                self.errorMessage = error.localizedDescription
+                self.publish()
+                return
+            }
+            self.scheduleNextAnimationFrame(
+                after: decoded,
+                generation: currentGeneration
+            )
+        }
+    }
+
+    private func advanceSlideshow() {
+        if playbackKind == .document, subimageIndex + 1 < subimageCount {
+            moveSubimage(1)
+            return
+        }
+        if index.currentIndex == index.items.indices.last,
+           !preferences.wrapsNavigation {
+            stopSlideshow()
+            publish()
+            return
+        }
+        move(.next)
+    }
+
+    private func stopFramePlayback() {
+        framePlaybackTask?.cancel()
+        framePlaybackTask = nil
+    }
+
+    private func stopSlideshow() {
+        slideshowTask?.cancel()
+        slideshowTask = nil
+        isSlideshowRunning = false
     }
 
     private func publishError(_ message: String) {

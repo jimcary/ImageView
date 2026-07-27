@@ -27,3 +27,31 @@ func decoderReadsPixelSizeAndPageCount() throws {
     #expect(decoded.pixelSize == CGSize(width: 80, height: 50))
     #expect(decoded.frameCount == 1)
 }
+
+@Test
+func decoderRasterizesEveryPDFPage() throws {
+    let url = FileManager.default.temporaryDirectory
+        .appendingPathComponent("Imageview-\(UUID().uuidString).pdf")
+    defer { try? FileManager.default.removeItem(at: url) }
+    var mediaBox = CGRect(x: 0, y: 0, width: 120, height: 80)
+    let context = try #require(
+        CGContext(url as CFURL, mediaBox: &mediaBox, nil)
+    )
+    context.beginPDFPage(nil)
+    context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+    context.fill(mediaBox)
+    context.endPDFPage()
+    context.beginPDFPage(nil)
+    context.setFillColor(CGColor(red: 0, green: 0, blue: 1, alpha: 1))
+    context.fill(mediaBox)
+    context.endPDFPage()
+    context.closePDF()
+
+    let first = try ImageDecoder().decode(url: url, page: 0)
+    let second = try ImageDecoder().decode(url: url, page: 1)
+
+    #expect(first.frameCount == 2)
+    #expect(first.pixelSize == CGSize(width: 240, height: 160))
+    #expect(second.frameCount == 2)
+    #expect(second.pixelSize == CGSize(width: 240, height: 160))
+}

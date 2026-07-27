@@ -11,6 +11,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         static let open = NSToolbarItem.Identifier("open")
         static let previous = NSToolbarItem.Identifier("previous")
         static let next = NSToolbarItem.Identifier("next")
+        static let previousPage = NSToolbarItem.Identifier("previousPage")
+        static let nextPage = NSToolbarItem.Identifier("nextPage")
+        static let slideshow = NSToolbarItem.Identifier("slideshow")
         static let fit = NSToolbarItem.Identifier("fit")
         static let actual = NSToolbarItem.Identifier("actual")
         static let rotateLeft = NSToolbarItem.Identifier("rotateLeft")
@@ -24,6 +27,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         static let pin = NSToolbarItem.Identifier("pin")
         static let pastePin = NSToolbarItem.Identifier("pastePin")
         static let ocr = NSToolbarItem.Identifier("ocr")
+        static let subject = NSToolbarItem.Identifier("subject")
         static let flexible = NSToolbarItem.Identifier.flexibleSpace
     }
 
@@ -38,7 +42,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     private var cropBeforeEditing = NormalizedRect.full
     private var pinControllers: [PinboardWindowController] = []
     private var ocrTask: Task<Void, Never>?
+    private var subjectTask: Task<Void, Never>?
     private var thumbnailHeightConstraint: NSLayoutConstraint?
+    private var lastPresentedMediaID: MediaItem.ID?
 
     var currentURL: URL? {
         session.snapshot.current?.url
@@ -98,6 +104,18 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
 
     @objc func showNext(_ sender: Any?) {
         session.move(.next)
+    }
+
+    @objc func showPreviousPage(_ sender: Any?) {
+        session.moveSubimage(-1)
+    }
+
+    @objc func showNextPage(_ sender: Any?) {
+        session.moveSubimage(1)
+    }
+
+    @objc func toggleSlideshow(_ sender: Any?) {
+        session.toggleSlideshow()
     }
 
     @objc func fitToWindow(_ sender: Any?) {
@@ -225,6 +243,43 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         }
     }
 
+    @objc func extractSubject(_ sender: Any?) {
+        guard SystemCapabilities.subjectExtractionAvailable,
+              let image = try? session.renderedCurrentImage() else {
+            NSSound.beep()
+            return
+        }
+        guard #available(macOS 14.0, *) else {
+            return
+        }
+
+        subjectTask?.cancel()
+        window?.title = L10n.text("viewer.extracting_subject")
+        subjectTask = Task { [weak self] in
+            do {
+                let extracted = try await SubjectExtractionController().extract(image)
+                guard !Task.isCancelled else { return }
+                self?.showPin(
+                    PinboardWindowController(
+                        image: NSImage(cgImage: extracted, size: .zero)
+                    )
+                )
+                if let snapshot = self?.session.snapshot {
+                    self?.apply(snapshot)
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                self?.presentError(
+                    title: L10n.text("error.subject_failed"),
+                    error: error
+                )
+                if let snapshot = self?.session.snapshot {
+                    self?.apply(snapshot)
+                }
+            }
+        }
+    }
+
     @objc func printCurrentImage(_ sender: Any?) {
         guard let image = try? session.renderedCurrentImage() else {
             NSSound.beep()
@@ -259,26 +314,29 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     func windowWillClose(_ notification: Notification) {
         session.cancel()
         ocrTask?.cancel()
+        subjectTask?.cancel()
         onClose?()
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
             ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.fit,
+            ToolbarID.previousPage, ToolbarID.nextPage, ToolbarID.slideshow,
             ToolbarID.actual, ToolbarID.rotateLeft, ToolbarID.rotateRight,
             ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop, ToolbarID.flexible,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
-            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr,
+            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr, ToolbarID.subject,
         ]
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
             ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.flexible,
+            ToolbarID.previousPage, ToolbarID.nextPage, ToolbarID.slideshow,
             ToolbarID.fit, ToolbarID.actual, ToolbarID.rotateLeft,
             ToolbarID.rotateRight, ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
-            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr,
+            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr, ToolbarID.subject,
         ]
     }
 
@@ -294,6 +352,12 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.previous"), symbol: "chevron.left", action: #selector(showPrevious(_:)))
         case ToolbarID.next:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.next"), symbol: "chevron.right", action: #selector(showNext(_:)))
+        case ToolbarID.previousPage:
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.previous_page"), symbol: "doc.badge.arrow.up", action: #selector(showPreviousPage(_:)))
+        case ToolbarID.nextPage:
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.next_page"), symbol: "doc.badge.arrow.down", action: #selector(showNextPage(_:)))
+        case ToolbarID.slideshow:
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.slideshow"), symbol: "play.rectangle", action: #selector(toggleSlideshow(_:)))
         case ToolbarID.fit:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.fit"), symbol: "arrow.up.left.and.arrow.down.right", action: #selector(fitToWindow(_:)))
         case ToolbarID.actual:
@@ -321,6 +385,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         case ToolbarID.ocr:
             guard SystemCapabilities.ocrAvailable else { return nil }
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.ocr"), symbol: "text.viewfinder", action: #selector(performOCR(_:)))
+        case ToolbarID.subject:
+            guard SystemCapabilities.subjectExtractionAvailable else { return nil }
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.subject"), symbol: "person.crop.rectangle", action: #selector(extractSubject(_:)))
         default:
             return nil
         }
@@ -403,11 +470,19 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         session.onChange = { [weak self] snapshot in
             self?.apply(snapshot)
         }
+        session.onFrame = { [weak self] image in
+            self?.canvas.present(image, resetViewport: false)
+        }
         apply(session.snapshot)
     }
 
     private func apply(_ snapshot: ViewerSession.Snapshot) {
-        canvas.image = snapshot.image
+        let mediaID = snapshot.current?.id
+        canvas.present(
+            snapshot.image,
+            resetViewport: mediaID != lastPresentedMediaID
+        )
+        lastPresentedMediaID = mediaID
         canvas.errorMessage = snapshot.errorMessage
         canvas.isLoading = snapshot.isLoading
         thumbnailStrip.update(items: snapshot.items, selectedID: snapshot.current?.id)
@@ -419,7 +494,15 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
 
         if let current = snapshot.current,
            let position = snapshot.position {
-            window?.title = "\(current.url.lastPathComponent) · \(position) / \(snapshot.items.count)"
+            var title = "\(current.url.lastPathComponent) · \(position) / \(snapshot.items.count)"
+            if snapshot.playbackKind == .document {
+                title += " · " + String(
+                    format: L10n.text("viewer.page_format"),
+                    snapshot.subimageIndex + 1,
+                    snapshot.subimageCount
+                )
+            }
+            window?.title = title
             window?.representedURL = current.url
         } else {
             window?.title = "Imageview"

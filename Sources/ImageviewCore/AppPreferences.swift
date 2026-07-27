@@ -82,6 +82,7 @@ public enum ShortcutPreferencesError: Error, Equatable {
 public enum AppPreferences {
     public static let defaultThumbnailSize = 96
     public static let defaultCacheLimitMB = 512
+    public static let defaultSlideshowInterval: Double = 3
     public static let defaultShortcuts = ShortcutCommand.allCases.map(defaultShortcut)
 
     public static func defaultShortcut(for command: ShortcutCommand) -> Shortcut {
@@ -111,6 +112,7 @@ public final class PreferencesStore {
         case cacheLimitMB = "preferences.cacheLimitMB"
         case clearsRecentItems = "preferences.clearsRecentItems"
         case shortcuts = "preferences.shortcuts"
+        case slideshowInterval = "preferences.slideshowInterval"
     }
 
     private let defaults: UserDefaults
@@ -195,6 +197,21 @@ public final class PreferencesStore {
     public var clearsRecentItems: Bool {
         get { bool(for: .clearsRecentItems, defaultValue: false) }
         set { defaults.set(newValue, forKey: Key.clearsRecentItems.rawValue) }
+    }
+
+    public var slideshowInterval: Double {
+        get {
+            guard defaults.object(forKey: Key.slideshowInterval.rawValue) != nil else {
+                return AppPreferences.defaultSlideshowInterval
+            }
+            return defaults.double(forKey: Key.slideshowInterval.rawValue)
+        }
+        set {
+            defaults.set(
+                min(max(newValue, 1), 60),
+                forKey: Key.slideshowInterval.rawValue
+            )
+        }
     }
 
     public var shortcuts: [Shortcut] {

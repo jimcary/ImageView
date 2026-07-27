@@ -4,6 +4,9 @@
 "menu.edit" = "Edit";
 "menu.view" = "View";
 "menu.open" = "Open…";
+"menu.open_recent" = "Open Recent";
+"menu.no_recent" = "No Recent Items";
+"menu.clear_recent" = "Clear Menu";
 "menu.print" = "Print…";
 "menu.close_window" = "Close Window";
 "menu.preferences" = "Settings…";
@@ -18,6 +21,9 @@
 "toolbar.open" = "Open";
 "toolbar.previous" = "Previous";
 "toolbar.next" = "Next";
+"toolbar.previous_page" = "Previous Page";
+"toolbar.next_page" = "Next Page";
+"toolbar.slideshow" = "Slideshow";
 "toolbar.fit" = "Fit";
 "toolbar.actual" = "Actual Size";
 "toolbar.rotate_left" = "Rotate Left";
@@ -31,9 +37,12 @@
 "toolbar.pin" = "Pin Image";
 "toolbar.pin_clipboard" = "Pin Clipboard";
 "toolbar.ocr" = "Recognize Text";
+"toolbar.subject" = "Extract Subject";
 "viewer.empty" = "Drop an image or choose File > Open";
 "viewer.loading" = "Loading…";
 "viewer.recognizing" = "Recognizing Text…";
+"viewer.extracting_subject" = "Extracting Subject…";
+"viewer.page_format" = "Page %d / %d";
 "crop.title" = "Crop";
 "crop.ratio" = "Ratio";
 "crop.width" = "Width";
@@ -50,6 +59,7 @@
 "error.save_failed" = "Save Failed";
 "error.overwrite_failed" = "Overwrite Failed";
 "error.ocr_failed" = "Text Recognition Failed";
+"error.subject_failed" = "Subject Extraction Failed";
 "error.cannot_overwrite_title" = "Cannot Overwrite This Format";
 "error.cannot_overwrite_message" = "Use Save As to export JPEG, PNG, TIFF, or HEIC.";
 "confirm.overwrite_title" = "Overwrite Original Image?";
@@ -104,6 +114,8 @@
 "preferences.clear_recent" = "Clear recent items on quit";
 "preferences.recursive" = "Include subfolders";
 "preferences.wrap" = "Loop navigation";
+"preferences.slideshow_interval" = "Slideshow interval";
+"preferences.seconds_format" = "%.1f s";
 "preferences.thumbnail_size" = "Thumbnail size";
 "preferences.show_thumbnails" = "Show thumbnail strip";
 "preferences.pin_opacity" = "Default pin opacity";

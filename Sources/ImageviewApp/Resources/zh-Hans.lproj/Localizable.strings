@@ -4,6 +4,9 @@
 "menu.edit" = "编辑";
 "menu.view" = "显示";
 "menu.open" = "打开…";
+"menu.open_recent" = "最近打开";
+"menu.no_recent" = "没有最近项目";
+"menu.clear_recent" = "清除菜单";
 "menu.print" = "打印…";
 "menu.close_window" = "关闭窗口";
 "menu.preferences" = "设置…";
@@ -18,6 +21,9 @@
 "toolbar.open" = "打开";
 "toolbar.previous" = "上一张";
 "toolbar.next" = "下一张";
+"toolbar.previous_page" = "上一页";
+"toolbar.next_page" = "下一页";
+"toolbar.slideshow" = "幻灯片";
 "toolbar.fit" = "适应窗口";
 "toolbar.actual" = "实际尺寸";
 "toolbar.rotate_left" = "向左旋转";
@@ -31,9 +37,12 @@
 "toolbar.pin" = "贴图";
 "toolbar.pin_clipboard" = "贴图剪贴板内容";
 "toolbar.ocr" = "识别文字";
+"toolbar.subject" = "提取主体";
 "viewer.empty" = "拖入图片，或选择“文件 > 打开”";
 "viewer.loading" = "正在载入…";
 "viewer.recognizing" = "正在识别文字…";
+"viewer.extracting_subject" = "正在提取主体…";
+"viewer.page_format" = "第 %d / %d 页";
 "crop.title" = "裁剪";
 "crop.ratio" = "比例";
 "crop.width" = "宽度";
@@ -50,6 +59,7 @@
 "error.save_failed" = "保存失败";
 "error.overwrite_failed" = "覆盖失败";
 "error.ocr_failed" = "文字识别失败";
+"error.subject_failed" = "主体提取失败";
 "error.cannot_overwrite_title" = "无法覆盖此格式";
 "error.cannot_overwrite_message" = "请使用“另存为”导出 JPEG、PNG、TIFF 或 HEIC。";
 "confirm.overwrite_title" = "覆盖原始图片？";
@@ -104,6 +114,8 @@
 "preferences.clear_recent" = "退出时清除最近项目";
 "preferences.recursive" = "包含子文件夹";
 "preferences.wrap" = "循环浏览";
+"preferences.slideshow_interval" = "幻灯片间隔";
+"preferences.seconds_format" = "%.1f 秒";
 "preferences.thumbnail_size" = "缩略图尺寸";
 "preferences.show_thumbnails" = "显示缩略图栏";
 "preferences.pin_opacity" = "默认贴图不透明度";

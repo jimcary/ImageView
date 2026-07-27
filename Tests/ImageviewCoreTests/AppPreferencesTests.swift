@@ -28,14 +28,17 @@ func preferencesPersistAndResetToDocumentedDefaults() throws {
     #expect(store.language == .system)
     store.thumbnailSize = 300
     store.language = .zhHans
+    store.slideshowInterval = 4.5
 
     let restored = PreferencesStore(defaults: defaults)
     #expect(restored.thumbnailSize == 300)
     #expect(restored.language == .zhHans)
+    #expect(restored.slideshowInterval == 4.5)
 
     restored.reset()
     #expect(restored.thumbnailSize == AppPreferences.defaultThumbnailSize)
     #expect(restored.language == .system)
+    #expect(restored.slideshowInterval == AppPreferences.defaultSlideshowInterval)
 }
 
 @Test

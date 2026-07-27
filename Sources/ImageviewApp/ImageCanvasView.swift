@@ -13,9 +13,6 @@ final class ImageCanvasView: NSView {
 
     var image: CGImage? {
         didSet {
-            if oldValue !== image {
-                panOffset = .zero
-            }
             needsDisplay = true
         }
     }
@@ -94,6 +91,16 @@ final class ImageCanvasView: NSView {
         zoomMode = .fit
         zoomScale = 1
         panOffset = .zero
+        needsDisplay = true
+    }
+
+    func present(_ image: CGImage?, resetViewport: Bool) {
+        self.image = image
+        if resetViewport {
+            zoomMode = .fit
+            zoomScale = 1
+            panOffset = .zero
+        }
         needsDisplay = true
     }
 
