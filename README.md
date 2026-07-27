@@ -37,9 +37,10 @@ open -a "$(pwd)/dist/Imageview.app" /path/to/folder
 - Animated GIF, APNG, WebP, and HEICS files play locally with cancellable frame decoding.
 - PDF and other multi-image documents expose Previous Page and Next Page controls. PDF pages are rendered through Core Graphics for reliable display.
 - Slideshow uses the interval configured in Settings and stops at the end when loop navigation is disabled.
-- Choose Crop, adjust the crop, then choose Save As to export JPEG, PNG, TIFF, or HEIC. JPEG/HEIC quality and metadata preservation are configurable in the crop panel. Overwrite first validates a sibling temporary file.
-- Use Pin Image or Pin Clipboard for floating image/text references. Image pins support original-size and thumbnail modes.
-- OCR and subject extraction run locally. Subject extraction appears only on supported macOS versions.
+- Choose Crop, then drag directly on the canvas to create, move, or resize the selection. Press ⌘K to overwrite the original after confirmation, or choose Save As to export JPEG, PNG, TIFF, or HEIC.
+- Press Delete to move the current image to the Trash.
+- Right-click the canvas for OCR, actual size, fit to window, sorting, rotate/flip/crop, Finder labels, pinning, Finder/default-app actions, copy, and Delete.
+- OCR runs locally.
 - Settings includes English, Simplified Chinese, system language, single/multi-window behavior, folder recursion, thumbnail sizing, slideshow interval, cache size, and configurable shortcuts.
 - User-selected folders are remembered with security-scoped bookmarks. Imageview never requests Full Disk Access.
 

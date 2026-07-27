@@ -7,6 +7,9 @@ executable="$app_path/Contents/MacOS/Imageview"
 
 test -x "$executable"
 test -f "$app_path/Contents/Info.plist"
+test -f "$app_path/Contents/Resources/Imageview.icns"
+test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' \
+  "$app_path/Contents/Info.plist")" = "Imageview.icns"
 test -f "$app_path/Contents/Resources/en.lproj/Localizable.strings"
 test -f "$app_path/Contents/Resources/zh-Hans.lproj/Localizable.strings"
 lipo "$executable" -verify_arch x86_64 arm64

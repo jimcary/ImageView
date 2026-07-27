@@ -30,6 +30,7 @@ lipo -create \
 cp "$repo_root/Info.plist" "$staging_path/Contents/Info.plist"
 cp -R "$repo_root/Sources/ImageviewApp/Resources/en.lproj" "$resources_path/"
 cp -R "$repo_root/Sources/ImageviewApp/Resources/zh-Hans.lproj" "$resources_path/"
+cp "$repo_root/Imageview.icns" "$resources_path/Imageview.icns"
 
 for architecture in x86_64 arm64; do
     resource_bundle="$repo_root/.build/$architecture-apple-macosx/release/Imageview_ImageviewApp.bundle"
