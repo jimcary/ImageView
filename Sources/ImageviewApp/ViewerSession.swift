@@ -229,6 +229,35 @@ final class ViewerSession {
         decodeCurrent()
     }
 
+    func setFinderLabel(_ labelNumber: Int) throws {
+        guard (0...7).contains(labelNumber),
+              let current = index.current else {
+            throw ImageDecodeError.cannotOpen
+        }
+        var url = current.url
+        var values = URLResourceValues()
+        values.labelNumber = labelNumber
+        try url.setResourceValues(values)
+
+        let refreshed = MediaItem(
+            url: url,
+            resourceIdentifier: current.resourceIdentifier,
+            fileSize: current.fileSize,
+            createdAt: current.createdAt,
+            modifiedAt: current.modifiedAt,
+            finderLabel: labelNumber,
+            finderOrder: current.finderOrder
+        )
+        let replacement = index.items.map {
+            $0.id == current.id ? refreshed : $0
+        }
+        index.replaceItems(
+            MediaItemSorter.sorted(replacement, by: sortOrder),
+            preserving: current.id
+        )
+        publish()
+    }
+
     func rotate(clockwise: Bool) {
         recipe = EditRecipe(
             rotationQuarterTurns: recipe.rotationQuarterTurns + (clockwise ? 1 : -1),

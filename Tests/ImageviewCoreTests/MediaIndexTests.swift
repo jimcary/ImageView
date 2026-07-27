@@ -14,6 +14,43 @@ func replacingItemsPreservesCurrentIdentifier() {
 }
 
 @Test
+func replacingCurrentMetadataAfterResortPreservesSelection() {
+    let original = [
+        MediaItem(
+            url: URL(fileURLWithPath: "/tmp/a.jpg"),
+            resourceIdentifier: "a",
+            finderLabel: 1
+        ),
+        MediaItem(
+            url: URL(fileURLWithPath: "/tmp/b.jpg"),
+            resourceIdentifier: "b",
+            finderLabel: 2
+        ),
+        MediaItem(
+            url: URL(fileURLWithPath: "/tmp/c.jpg"),
+            resourceIdentifier: "c",
+            finderLabel: 3
+        ),
+    ]
+    var index = MediaIndex(items: original)
+    index.select(id: "b")
+    let relabeled = MediaItem(
+        url: original[1].url,
+        resourceIdentifier: original[1].resourceIdentifier,
+        finderLabel: 7
+    )
+    let replacement = MediaItemSorter.sorted(
+        [original[0], relabeled, original[2]],
+        by: .finderLabel
+    )
+
+    index.replaceItems(replacement, preserving: "b")
+
+    #expect(index.items.map(\.id) == ["a", "c", "b"])
+    #expect(index.current?.id == "b")
+}
+
+@Test
 func deletingCurrentItemSelectsNearestSurvivor() {
     let original = mediaFixtures(["a.jpg", "b.jpg", "c.jpg"])
     var index = MediaIndex(items: original)

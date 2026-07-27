@@ -4,6 +4,7 @@ import ImageviewCore
 @MainActor
 final class InspectorViewController: NSViewController {
     var onDeleteRequested: (() -> Void)?
+    var onFinderLabelChanged: ((Int) -> Void)?
 
     private let textView = NSTextView()
     private let labelPopup = NSPopUpButton()
@@ -130,13 +131,7 @@ final class InspectorViewController: NSViewController {
     }
 
     @objc private func labelChanged(_ sender: Any?) {
-        guard var url = item?.url else { return }
-        var values = URLResourceValues()
-        values.labelNumber = labelPopup.indexOfSelectedItem
-        do {
-            try url.setResourceValues(values)
-        } catch {
-            NSAlert(error: error).runModal()
-        }
+        guard item != nil else { return }
+        onFinderLabelChanged?(labelPopup.indexOfSelectedItem)
     }
 }

@@ -246,15 +246,15 @@ final class ViewerWindowController:
 
     @objc func setFinderLabel(_ sender: Any?) {
         guard let item = sender as? NSMenuItem,
-              (0...7).contains(item.tag),
-              var url = session.snapshot.current?.url else {
+              (0...7).contains(item.tag) else {
             return
         }
-        var values = URLResourceValues()
-        values.labelNumber = item.tag
+        applyFinderLabel(item.tag)
+    }
+
+    private func applyFinderLabel(_ labelNumber: Int) {
         do {
-            try url.setResourceValues(values)
-            session.refreshCurrentFolder()
+            try session.setFinderLabel(labelNumber)
         } catch {
             presentError(title: L10n.text("menu.finder_label"), error: error)
         }
@@ -529,6 +529,9 @@ final class ViewerWindowController:
         inspectorController.onDeleteRequested = { [weak self] in
             self?.deleteCurrent(nil)
         }
+        inspectorController.onFinderLabelChanged = { [weak self] labelNumber in
+            self?.applyFinderLabel(labelNumber)
+        }
         session.onChange = { [weak self] snapshot in
             self?.apply(snapshot)
         }
@@ -590,6 +593,7 @@ final class ViewerWindowController:
 
     private func makeContextMenu() -> NSMenu {
         let menu = NSMenu()
+        menu.setAccessibilityIdentifier("imageCanvasContextMenu")
         menu.addItem(
             contextMenuItem(
                 L10n.text("menu.recognize_text"),

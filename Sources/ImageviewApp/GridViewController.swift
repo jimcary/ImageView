@@ -83,7 +83,7 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
     }
 
     func update(items: [MediaItem], selectedID: MediaItem.ID?) {
-        guard allItems.map(\.id) != items.map(\.id) || self.selectedID != selectedID else {
+        guard allItems != items || self.selectedID != selectedID else {
             return
         }
         allItems = items

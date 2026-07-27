@@ -48,22 +48,88 @@ final class ImageviewAppUITests: XCTestCase {
     }
 
     func testDeleteKeyMovesCurrentFixtureToTrashAndSelectsNext() {
+        let blueURL = fixturesURL.appendingPathComponent("blue.jpg")
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 4"].waitForExistence(timeout: 5))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: blueURL.path))
+
         app.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+
+        XCTAssertTrue(waitForFileRemoval(at: blueURL))
         XCTAssertTrue(app.windows["green.png · 1 / 3"].waitForExistence(timeout: 5))
     }
 
+    func testDeleteHandlesMiddleLastAndOnlyExplicitFiles() {
+        let blueURL = fixturesURL.appendingPathComponent("blue.jpg")
+        let greenURL = fixturesURL.appendingPathComponent("green.png")
+        let redURL = fixturesURL.appendingPathComponent("red.png")
+        app.terminate()
+        launchApp(opening: [blueURL, greenURL, redURL])
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 3"].waitForExistence(timeout: 5))
+
+        app.toolbars.buttons["Next"].click()
+        XCTAssertTrue(app.windows["green.png · 2 / 3"].waitForExistence(timeout: 5))
+        app.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+        XCTAssertTrue(waitForFileRemoval(at: greenURL))
+        XCTAssertTrue(app.windows["red.png · 2 / 2"].waitForExistence(timeout: 5))
+
+        app.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+        XCTAssertTrue(waitForFileRemoval(at: redURL))
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 1"].waitForExistence(timeout: 5))
+
+        app.typeKey(XCUIKeyboardKey.delete.rawValue, modifierFlags: [])
+        XCTAssertTrue(waitForFileRemoval(at: blueURL))
+        XCTAssertTrue(app.windows["Imageview"].waitForExistence(timeout: 5))
+    }
+
     func testImageCanvasContextMenuUsesSupportedActions() {
+        let blueURL = fixturesURL.appendingPathComponent("blue.jpg")
+        let greenURL = fixturesURL.appendingPathComponent("green.png")
+        let redURL = fixturesURL.appendingPathComponent("red.png")
+        app.terminate()
+        launchApp(opening: [blueURL, greenURL, redURL])
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 3"].waitForExistence(timeout: 5))
+
         let canvas = app.otherElements["imageCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 5))
         canvas.rightClick()
 
-        for title in [
+        let contextMenu = app.menus["imageCanvasContextMenu"]
+        XCTAssertTrue(contextMenu.waitForExistence(timeout: 5))
+        XCTAssertEqual(contextMenu.menuItems.allElementsBoundByIndex.map { $0.title }, [
             "Recognize Text", "Actual Size", "Fit to Window", "Sort",
             "Image Processing", "Finder Label", "Pin to Desktop",
             "Show in Finder", "Open Default", "Copy", "Delete",
-        ] {
-            XCTAssertTrue(app.menuItems[title].exists, "Missing context menu item: \(title)")
-        }
+        ])
+
+        let sortItem = contextMenu.menuItems["Sort"]
+        sortItem.hover()
+        let sortMenu = sortItem.menus.firstMatch
+        XCTAssertTrue(sortMenu.waitForExistence(timeout: 5))
+        XCTAssertEqual(sortMenu.menuItems.allElementsBoundByIndex.map { $0.title }, [
+            "Name", "Extension", "Created", "Modified",
+            "Finder Order", "Random", "Finder Label",
+        ])
+        sortMenu.menuItems["Extension"].click()
+
+        app.toolbars.buttons["Grid"].click()
+        XCTAssertEqual(app.popUpButtons.firstMatch.value as? String, "Extension")
+        app.toolbars.buttons["Grid"].click()
+
+        canvas.rightClick()
+        let reopenedContextMenu = app.menus["imageCanvasContextMenu"]
+        XCTAssertTrue(reopenedContextMenu.waitForExistence(timeout: 5))
+        let finderLabelItem = reopenedContextMenu.menuItems["Finder Label"]
+        finderLabelItem.hover()
+        let finderLabelMenu = finderLabelItem.menus.firstMatch
+        XCTAssertTrue(finderLabelMenu.waitForExistence(timeout: 5))
+        XCTAssertEqual(finderLabelMenu.menuItems.allElementsBoundByIndex.map { $0.title }, [
+            "No Label", "Gray", "Green", "Purple",
+            "Blue", "Yellow", "Red", "Orange",
+        ])
+        finderLabelMenu.menuItems["Green"].click()
+
+        app.toolbars.buttons["Info"].click()
+        XCTAssertEqual(app.popUpButtons.firstMatch.value as? String, "Green")
     }
 
     func testGridRoundTripReturnsToViewer() {
@@ -206,6 +272,17 @@ final class ImageviewAppUITests: XCTestCase {
         return nil
     }
 
+    private func waitForFileRemoval(at url: URL) -> Bool {
+        let deadline = Date().addingTimeInterval(5)
+        repeat {
+            if !FileManager.default.fileExists(atPath: url.path) {
+                return true
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+        return false
+    }
+
     private func configuredAppURL() throws -> URL {
         guard let path = ProcessInfo.processInfo.environment["IMAGEVIEW_APP_PATH"],
               !path.isEmpty else {
@@ -219,14 +296,22 @@ final class ImageviewAppUITests: XCTestCase {
     }
 
     private func launchApp() {
-        guard let fixturesURL, let appURL else {
+        guard let fixturesURL else {
+            XCTFail("Imageview UI test was not configured")
+            return
+        }
+        launchApp(opening: [fixturesURL])
+    }
+
+    private func launchApp(opening urls: [URL]) {
+        guard let appURL else {
             XCTFail("Imageview UI test was not configured")
             return
         }
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.activates = true
         NSWorkspace.shared.open(
-            [fixturesURL],
+            urls,
             withApplicationAt: appURL,
             configuration: configuration
         )
