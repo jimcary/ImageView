@@ -121,7 +121,7 @@
 "preferences.pin_opacity" = "Default pin opacity";
 "preferences.cache_limit" = "Cache limit (MB)";
 "preferences.reset" = "Restore Defaults";
-"preferences.shortcuts_info" = "Open ⌘O · Previous ← · Next → · Crop C · Grid G · Info I · Pin P · OCR ⇧⌘R";
+"preferences.shortcuts_info" = "Open ⌘O · Previous ← · Next → · Crop ⌘K · Delete ⌫ · Grid G · Info I · Pin P · OCR ⇧⌘R";
 "preferences.shortcut_error" = "Shortcut Not Saved";
 "preferences.shortcut_conflict" = "That shortcut is already assigned to another command.";
 "preferences.shortcut_invalid" = "Enter one key for every command.";
@@ -130,6 +130,7 @@
 "shortcut.previous" = "Previous Image";
 "shortcut.next" = "Next Image";
 "shortcut.crop" = "Crop";
+"shortcut.delete" = "Delete";
 "shortcut.grid" = "Grid";
 "shortcut.inspector" = "Info";
 "shortcut.pin" = "Pin Image";

@@ -11,6 +11,7 @@ public enum ShortcutCommand: String, CaseIterable, Codable, Sendable {
     case previous
     case next
     case crop
+    case delete
     case grid
     case inspector
     case pin
@@ -90,7 +91,8 @@ public enum AppPreferences {
         case .open: Shortcut(command: command, key: "o", modifiers: [.command])
         case .previous: Shortcut(command: command, key: "\u{F702}", modifiers: [])
         case .next: Shortcut(command: command, key: "\u{F703}", modifiers: [])
-        case .crop: Shortcut(command: command, key: "c", modifiers: [])
+        case .crop: Shortcut(command: command, key: "k", modifiers: [.command])
+        case .delete: Shortcut(command: command, key: "\u{8}", modifiers: [])
         case .grid: Shortcut(command: command, key: "g", modifiers: [])
         case .inspector: Shortcut(command: command, key: "i", modifiers: [])
         case .pin: Shortcut(command: command, key: "p", modifiers: [])

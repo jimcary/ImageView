@@ -381,6 +381,7 @@ final class PreferencesWindowController: NSWindowController {
         switch key {
         case "\u{F702}": "←"
         case "\u{F703}": "→"
+        case "\u{8}": "⌫"
         default: key.uppercased()
         }
     }
@@ -389,6 +390,7 @@ final class PreferencesWindowController: NSWindowController {
         switch key.trimmingCharacters(in: .whitespacesAndNewlines) {
         case "←": "\u{F702}"
         case "→": "\u{F703}"
+        case "⌫": "\u{8}"
         default: key.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }

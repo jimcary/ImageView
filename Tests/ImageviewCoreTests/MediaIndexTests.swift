@@ -25,6 +25,29 @@ func deletingCurrentItemSelectsNearestSurvivor() {
 }
 
 @Test
+func removingMiddleItemSelectsTheFollowingItem() {
+    let items = mediaFixtures(["a.jpg", "b.jpg", "c.jpg"])
+    var index = MediaIndex(items: items)
+    index.select(id: items[1].id)
+
+    let removed = index.removeCurrent()
+
+    #expect(removed?.url.lastPathComponent == "b.jpg")
+    #expect(index.current?.url.lastPathComponent == "c.jpg")
+}
+
+@Test
+func removingLastItemSelectsThePreviousItem() {
+    let items = mediaFixtures(["a.jpg", "b.jpg"])
+    var index = MediaIndex(items: items)
+    index.select(id: items[1].id)
+
+    _ = index.removeCurrent()
+
+    #expect(index.current?.url.lastPathComponent == "a.jpg")
+}
+
+@Test
 func navigationNeverIndexesAnEmptyCollection() {
     var index = MediaIndex(items: [])
 

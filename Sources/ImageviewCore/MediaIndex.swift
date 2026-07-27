@@ -140,6 +140,16 @@ public struct MediaIndex: Sendable {
         currentIndex = items.firstIndex { $0.id == id }
     }
 
+    @discardableResult
+    public mutating func removeCurrent() -> MediaItem? {
+        guard let currentIndex, items.indices.contains(currentIndex) else {
+            return nil
+        }
+        let removed = items.remove(at: currentIndex)
+        self.currentIndex = items.isEmpty ? nil : min(currentIndex, items.count - 1)
+        return removed
+    }
+
     public mutating func replaceItems(
         _ replacement: [MediaItem],
         preserving identifier: MediaItem.ID? = nil

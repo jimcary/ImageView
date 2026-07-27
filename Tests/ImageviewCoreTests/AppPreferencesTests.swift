@@ -18,6 +18,18 @@ func duplicateShortcutReportsBothCommands() {
 }
 
 @Test
+func cropAndDeleteUseTheRequestedDefaultShortcuts() {
+    #expect(
+        AppPreferences.defaultShortcut(for: .crop)
+            == Shortcut(command: .crop, key: "k", modifiers: [.command])
+    )
+    #expect(
+        AppPreferences.defaultShortcut(for: .delete)
+            == Shortcut(command: .delete, key: "\u{8}", modifiers: [])
+    )
+}
+
+@Test
 func preferencesPersistAndResetToDocumentedDefaults() throws {
     let suiteName = "ImageviewTests.\(UUID().uuidString)"
     let defaults = try #require(UserDefaults(suiteName: suiteName))
