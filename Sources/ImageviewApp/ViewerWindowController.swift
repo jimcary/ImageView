@@ -1,6 +1,22 @@
 import AppKit
 import ImageviewCore
 
+private final class ViewerWindow: NSWindow {
+    var onDeleteRequested: (() -> Bool)?
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        let modifiers = event.modifierFlags.intersection([
+            .command, .option, .control, .shift,
+        ])
+        if let key = event.charactersIgnoringModifiers,
+           DeleteShortcut.matches(key: key, hasModifiers: !modifiers.isEmpty),
+           onDeleteRequested?() == true {
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
 @MainActor
 final class ViewerWindowController:
     NSWindowController,
@@ -96,7 +112,7 @@ final class ViewerWindowController:
     }
 
     init(urls: [URL] = []) {
-        let window = NSWindow(
+        let window = ViewerWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1_040, height: 700),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
@@ -109,6 +125,13 @@ final class ViewerWindowController:
         super.init(window: window)
 
         window.delegate = self
+        window.onDeleteRequested = { [weak self] in
+            guard let self, self.hasCurrentItem else {
+                return false
+            }
+            self.deleteCurrent(nil)
+            return true
+        }
         configureContent(for: window)
         configureToolbar(for: window)
         configureCallbacks()

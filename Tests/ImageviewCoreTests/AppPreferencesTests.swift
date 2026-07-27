@@ -46,6 +46,13 @@ func requestedCommandsUseTheDocumentedDefaultShortcuts() {
 }
 
 @Test
+func deleteShortcutAcceptsMacDeleteAndForwardDelWithoutModifiers() {
+    #expect(DeleteShortcut.matches(key: "\u{7F}", hasModifiers: false))
+    #expect(DeleteShortcut.matches(key: "\u{F728}", hasModifiers: false))
+    #expect(!DeleteShortcut.matches(key: "\u{F728}", hasModifiers: true))
+}
+
+@Test
 func preferencesPersistAndResetToDocumentedDefaults() throws {
     let suiteName = "ImageviewTests.\(UUID().uuidString)"
     let defaults = try #require(UserDefaults(suiteName: suiteName))
