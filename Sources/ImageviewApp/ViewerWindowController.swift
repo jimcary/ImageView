@@ -15,10 +15,18 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         static let rotateRight = NSToolbarItem.Identifier("rotateRight")
         static let flip = NSToolbarItem.Identifier("flip")
         static let crop = NSToolbarItem.Identifier("crop")
+        static let grid = NSToolbarItem.Identifier("grid")
+        static let thumbnails = NSToolbarItem.Identifier("thumbnails")
+        static let inspector = NSToolbarItem.Identifier("inspector")
         static let flexible = NSToolbarItem.Identifier.flexibleSpace
     }
 
     private let canvas = ImageCanvasView(frame: .zero)
+    private let thumbnailStrip = ThumbnailStripView(frame: .zero)
+    private let gridController = GridViewController()
+    private let inspectorController = InspectorViewController()
+    private let centerStack = NSStackView()
+    private let splitView = NSSplitView()
     private let session = ViewerSession()
     private var cropPanel: CropPanelController?
     private var cropBeforeEditing = NormalizedRect.full
@@ -37,7 +45,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         super.init(window: window)
 
         window.delegate = self
-        window.contentView = canvas
+        configureContent(for: window)
         configureToolbar(for: window)
         configureCallbacks()
 
@@ -135,6 +143,20 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         positionCropPanel(controller)
     }
 
+    @objc func toggleGrid(_ sender: Any?) {
+        gridController.view.isHidden.toggle()
+        canvas.isHidden = !gridController.view.isHidden
+    }
+
+    @objc func toggleThumbnails(_ sender: Any?) {
+        thumbnailStrip.isHidden.toggle()
+    }
+
+    @objc func toggleInspector(_ sender: Any?) {
+        inspectorController.view.isHidden.toggle()
+        splitView.adjustSubviews()
+    }
+
     func windowWillClose(_ notification: Notification) {
         session.cancel()
     }
@@ -144,6 +166,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.fit,
             ToolbarID.actual, ToolbarID.rotateLeft, ToolbarID.rotateRight,
             ToolbarID.flip, ToolbarID.crop, ToolbarID.flexible,
+            ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
         ]
     }
 
@@ -152,6 +175,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.flexible,
             ToolbarID.fit, ToolbarID.actual, ToolbarID.rotateLeft,
             ToolbarID.rotateRight, ToolbarID.flip, ToolbarID.crop,
+            ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
         ]
     }
 
@@ -179,6 +203,12 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             toolbarItem(itemIdentifier, label: "Flip", symbol: "arrow.left.and.right.righttriangle.left.righttriangle.right", action: #selector(flipHorizontal(_:)))
         case ToolbarID.crop:
             toolbarItem(itemIdentifier, label: "Crop", symbol: "crop", action: #selector(beginCrop(_:)))
+        case ToolbarID.grid:
+            toolbarItem(itemIdentifier, label: "Grid", symbol: "square.grid.3x3", action: #selector(toggleGrid(_:)))
+        case ToolbarID.thumbnails:
+            toolbarItem(itemIdentifier, label: "Thumbnails", symbol: "rectangle.bottomthird.inset.filled", action: #selector(toggleThumbnails(_:)))
+        case ToolbarID.inspector:
+            toolbarItem(itemIdentifier, label: "Info", symbol: "info.circle", action: #selector(toggleInspector(_:)))
         default:
             nil
         }
@@ -193,6 +223,38 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         window.toolbarStyle = .unified
     }
 
+    private func configureContent(for window: NSWindow) {
+        let contentArea = NSView()
+        for view in [canvas, gridController.view] {
+            view.translatesAutoresizingMaskIntoConstraints = false
+            contentArea.addSubview(view)
+            NSLayoutConstraint.activate([
+                view.leadingAnchor.constraint(equalTo: contentArea.leadingAnchor),
+                view.trailingAnchor.constraint(equalTo: contentArea.trailingAnchor),
+                view.topAnchor.constraint(equalTo: contentArea.topAnchor),
+                view.bottomAnchor.constraint(equalTo: contentArea.bottomAnchor),
+            ])
+        }
+        gridController.view.isHidden = true
+
+        thumbnailStrip.translatesAutoresizingMaskIntoConstraints = false
+        thumbnailStrip.heightAnchor.constraint(equalToConstant: 104).isActive = true
+        centerStack.orientation = .vertical
+        centerStack.spacing = 0
+        centerStack.addArrangedSubview(contentArea)
+        centerStack.addArrangedSubview(thumbnailStrip)
+
+        inspectorController.view.isHidden = true
+        inspectorController.view.translatesAutoresizingMaskIntoConstraints = false
+        inspectorController.view.widthAnchor.constraint(equalToConstant: 300).isActive = true
+
+        splitView.isVertical = true
+        splitView.dividerStyle = .thin
+        splitView.addArrangedSubview(centerStack)
+        splitView.addArrangedSubview(inspectorController.view)
+        window.contentView = splitView
+    }
+
     private func configureCallbacks() {
         canvas.onOpenURLs = { [weak self] urls in
             self?.open(urls: urls)
@@ -204,6 +266,17 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             self?.session.setCrop(crop)
             self?.updateCropPanelSize()
         }
+        thumbnailStrip.onSelect = { [weak self] id in
+            self?.session.select(id: id)
+        }
+        gridController.onSelect = { [weak self] id in
+            self?.session.select(id: id)
+            self?.gridController.view.isHidden = true
+            self?.canvas.isHidden = false
+        }
+        inspectorController.onTrash = { [weak self] in
+            self?.session.refreshCurrentFolder()
+        }
         session.onChange = { [weak self] snapshot in
             self?.apply(snapshot)
         }
@@ -214,6 +287,12 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         canvas.image = snapshot.image
         canvas.errorMessage = snapshot.errorMessage
         canvas.isLoading = snapshot.isLoading
+        thumbnailStrip.update(items: snapshot.items, selectedID: snapshot.current?.id)
+        gridController.update(items: snapshot.items, selectedID: snapshot.current?.id)
+        inspectorController.update(
+            item: snapshot.current,
+            properties: snapshot.sourceProperties
+        )
 
         if let current = snapshot.current,
            let position = snapshot.position {

@@ -96,6 +96,19 @@ final class ViewerSession {
         decodeCurrent()
     }
 
+    func refreshCurrentFolder() {
+        guard let folder = index.current?.url.deletingLastPathComponent() else {
+            return
+        }
+        do {
+            let replacement = try FolderScanner().scan(folder: folder, recursive: false)
+            index.replaceItems(MediaItemSorter.sorted(replacement, by: .name))
+            decodeCurrent()
+        } catch {
+            publishError(error.localizedDescription)
+        }
+    }
+
     func rotate(clockwise: Bool) {
         recipe = EditRecipe(
             rotationQuarterTurns: recipe.rotationQuarterTurns + (clockwise ? 1 : -1),
