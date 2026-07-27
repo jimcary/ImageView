@@ -9,6 +9,7 @@ final class ImageCanvasView: NSView {
 
     var onOpenURLs: (([URL]) -> Void)?
     var onNavigate: ((Bool) -> Void)?
+    var onBeginCropRequested: (() -> Bool)?
     var onCropChanged: ((NormalizedRect) -> Void)?
     var onCancelCrop: (() -> Void)?
 
@@ -139,8 +140,23 @@ final class ImageCanvasView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
-        if cropMode, let image {
-            let imageRect = imageRect(for: image)
+        lastDragPoint = nil
+        cropDrag = nil
+        guard let image else {
+            return
+        }
+        let imageRect = imageRect(for: image)
+        let intent = ImageCanvasInteraction.primaryDragIntent(
+            startsInsideImage: imageRect.contains(point),
+            optionPressed: event.modifierFlags.contains(.option)
+        )
+        switch intent {
+        case .pan:
+            lastDragPoint = point
+        case .cropSelection:
+            if !cropMode, onBeginCropRequested?() != true {
+                return
+            }
             if hasCropSelection {
                 let displayRect = cropDisplayRect(in: imageRect)
                 let edges = cropEdges(at: point, cropRect: displayRect)
@@ -148,12 +164,11 @@ final class ImageCanvasView: NSView {
                     cropDrag = CropDrag(startPoint: point, startCrop: crop, edges: edges)
                     return
                 }
-            } else if imageRect.contains(point) {
-                cropDrag = CropDrag(startPoint: point, startCrop: nil, edges: [])
-                return
             }
+            cropDrag = CropDrag(startPoint: point, startCrop: nil, edges: [])
+        case nil:
+            break
         }
-        lastDragPoint = point
     }
 
     override func mouseDragged(with event: NSEvent) {

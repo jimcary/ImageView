@@ -595,6 +595,13 @@ final class ViewerWindowController:
         canvas.onNavigate = { [weak self] forward in
             self?.session.move(forward ? .next : .previous)
         }
+        canvas.onBeginCropRequested = { [weak self] in
+            guard let self else {
+                return false
+            }
+            self.beginCrop(nil)
+            return self.canvas.isCropMode
+        }
         canvas.onCropChanged = { [weak self] crop in
             self?.session.setCrop(crop)
         }

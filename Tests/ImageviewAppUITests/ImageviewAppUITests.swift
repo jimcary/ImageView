@@ -166,23 +166,22 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertFalse(app.collectionViews.firstMatch.exists)
     }
 
-    func testCropSelectionAndCommandKOverwriteOriginal() {
+    func testDirectCropSelectionAndCommandSOverwriteOriginal() {
         let canvas = app.otherElements["imageCanvas"]
         XCTAssertTrue(canvas.waitForExistence(timeout: 5))
         let originalURL = fixturesURL.appendingPathComponent("blue.jpg")
         guard let originalSize = decodedPixelSize(at: originalURL) else {
             return XCTFail("Expected the JPEG fixture to decode before cropping")
         }
-        app.toolbars.buttons["Crop"].click()
         let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.25, dy: 0.25))
         let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.75, dy: 0.75))
         start.press(forDuration: 0.1, thenDragTo: end)
-        app.typeKey("k", modifierFlags: .command)
+        app.typeKey("s", modifierFlags: .command)
         guard let croppedSize = waitForDecodedPixelSize(
             at: originalURL,
             smallerThan: originalSize
         ) else {
-            return XCTFail("Expected Command-K to overwrite blue.jpg with a decodable crop")
+            return XCTFail("Expected Command-S to overwrite blue.jpg with a decodable crop")
         }
         XCTAssertLessThan(croppedSize.width, originalSize.width)
         XCTAssertLessThan(croppedSize.height, originalSize.height)
