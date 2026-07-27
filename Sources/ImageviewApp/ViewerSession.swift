@@ -24,6 +24,7 @@ final class ViewerSession {
     private var generation = DecodeGeneration()
     private var decodeTask: Task<Void, Never>?
     private var prefetchTasks: [Task<Void, Never>] = []
+    private var folderMonitor: FolderMonitor?
     private var cache: CostCache<String, DecodedImage>
     private var protectedCacheKey: String?
     private var isLoading = false
@@ -74,11 +75,14 @@ final class ViewerSession {
                 }) {
                     index.select(id: selected.id)
                 }
+                startMonitoring(folder: fileURL.deletingLastPathComponent())
             } else {
                 let items = supportedURLs.enumerated().map { order, url in
                     MediaItem(url: url, finderOrder: order)
                 }
                 index.replaceItems(items)
+                folderMonitor?.stop()
+                folderMonitor = nil
             }
             decodeCurrent()
         } catch {
@@ -92,6 +96,7 @@ final class ViewerSession {
             recursive: preferences.recursiveScan
         )
         index.replaceItems(MediaItemSorter.sorted(items, by: .name))
+        startMonitoring(folder: folder)
         decodeCurrent()
     }
 
@@ -195,6 +200,8 @@ final class ViewerSession {
         decodeTask?.cancel()
         prefetchTasks.forEach { $0.cancel() }
         prefetchTasks.removeAll()
+        folderMonitor?.stop()
+        folderMonitor = nil
         generation.invalidate()
     }
 
@@ -323,5 +330,20 @@ final class ViewerSession {
 
     private func publish() {
         onChange?(snapshot)
+    }
+
+    private func startMonitoring(folder: URL) {
+        folderMonitor?.stop()
+        let monitor = FolderMonitor()
+        do {
+            try monitor.start(url: folder) { [weak self] in
+                Task { @MainActor [weak self] in
+                    self?.refreshCurrentFolder()
+                }
+            }
+            folderMonitor = monitor
+        } catch {
+            folderMonitor = nil
+        }
     }
 }
