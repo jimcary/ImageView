@@ -148,5 +148,6 @@
 "shortcut.rotateLeft" = "Rotate Left";
 "shortcut.rotateRight" = "Rotate Right";
 "shortcut.save" = "Save";
+"shortcut.showInFinder" = "Show in Finder";
 "shortcut.pin" = "Pin Image";
 "shortcut.ocr" = "Recognize Text";

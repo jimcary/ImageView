@@ -148,5 +148,6 @@
 "shortcut.rotateLeft" = "向左旋转";
 "shortcut.rotateRight" = "向右旋转";
 "shortcut.save" = "保存";
+"shortcut.showInFinder" = "在 Finder 中显示";
 "shortcut.pin" = "贴图";
 "shortcut.ocr" = "识别文字";
