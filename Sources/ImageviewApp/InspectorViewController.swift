@@ -15,15 +15,17 @@ final class InspectorViewController: NSViewController {
         root.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
 
         labelPopup.addItems(withTitles: [
-            "No Label", "Gray", "Green", "Purple", "Blue", "Yellow", "Red", "Orange",
+            L10n.text("label.no_label"), L10n.text("label.gray"), L10n.text("label.green"),
+            L10n.text("label.purple"), L10n.text("label.blue"), L10n.text("label.yellow"),
+            L10n.text("label.red"), L10n.text("label.orange"),
         ])
         labelPopup.target = self
         labelPopup.action = #selector(labelChanged(_:))
 
-        let reveal = button("Show in Finder", action: #selector(revealInFinder(_:)))
-        let copyPath = button("Copy Path", action: #selector(copyPath(_:)))
-        let openDefault = button("Open Default", action: #selector(openInDefaultApp(_:)))
-        let trash = button("Move to Trash", action: #selector(moveToTrash(_:)))
+        let reveal = button(L10n.text("inspector.show_finder"), action: #selector(revealInFinder(_:)))
+        let copyPath = button(L10n.text("inspector.copy_path"), action: #selector(copyPath(_:)))
+        let openDefault = button(L10n.text("inspector.open_default"), action: #selector(openInDefaultApp(_:)))
+        let trash = button(L10n.text("inspector.trash"), action: #selector(moveToTrash(_:)))
 
         let buttonGrid = NSGridView(views: [
             [reveal, copyPath],
@@ -34,7 +36,7 @@ final class InspectorViewController: NSViewController {
         buttonGrid.translatesAutoresizingMaskIntoConstraints = false
 
         let labelRow = NSStackView(views: [
-            NSTextField(labelWithString: "Finder Label"),
+            NSTextField(labelWithString: L10n.text("inspector.finder_label")),
             labelPopup,
         ])
         labelRow.orientation = .horizontal

@@ -85,7 +85,7 @@ final class ImageCanvasView: NSView {
             }
         } else {
             let message = errorMessage
-                ?? (isLoading ? "Loading…" : "Drop an image or choose File > Open")
+                ?? (isLoading ? L10n.text("viewer.loading") : L10n.text("viewer.empty"))
             drawCentered(message)
         }
     }

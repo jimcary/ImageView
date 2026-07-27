@@ -20,16 +20,17 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         formatPopup.target = self
         formatPopup.action = #selector(filterChanged(_:))
         labelPopup.addItems(withTitles: [
-            "All Labels", "Unlabeled", "Gray", "Green", "Purple",
-            "Blue", "Yellow", "Red", "Orange",
+            L10n.text("label.all"), L10n.text("label.none"), L10n.text("label.gray"),
+            L10n.text("label.green"), L10n.text("label.purple"), L10n.text("label.blue"),
+            L10n.text("label.yellow"), L10n.text("label.red"), L10n.text("label.orange"),
         ])
         labelPopup.target = self
         labelPopup.action = #selector(filterChanged(_:))
 
         let controls = NSStackView(views: [
-            NSTextField(labelWithString: "Format"),
+            NSTextField(labelWithString: L10n.text("grid.format")),
             formatPopup,
-            NSTextField(labelWithString: "Label"),
+            NSTextField(labelWithString: L10n.text("grid.label")),
             labelPopup,
         ])
         controls.orientation = .horizontal
@@ -125,7 +126,7 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
             .filter { !$0.isEmpty }
             .sorted()
         formatPopup.removeAllItems()
-        formatPopup.addItem(withTitle: "All Formats")
+        formatPopup.addItem(withTitle: L10n.text("grid.all_formats"))
         formatPopup.addItems(withTitles: formats.map { $0.uppercased() })
         if let selected, formatPopup.itemTitles.contains(selected) {
             formatPopup.selectItem(withTitle: selected)

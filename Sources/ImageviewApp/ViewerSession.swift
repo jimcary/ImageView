@@ -17,16 +17,24 @@ final class ViewerSession {
     var onChange: ((Snapshot) -> Void)?
 
     private var index = MediaIndex(items: [])
+    private let preferences: PreferencesStore
     private var sourceImage: DecodedImage?
     private var displayedImage: CGImage?
     private var recipe = EditRecipe()
     private var generation = DecodeGeneration()
     private var decodeTask: Task<Void, Never>?
     private var prefetchTasks: [Task<Void, Never>] = []
-    private var cache = CostCache<String, DecodedImage>(costLimit: 512 * 1_024 * 1_024)
+    private var cache: CostCache<String, DecodedImage>
     private var protectedCacheKey: String?
     private var isLoading = false
     private var errorMessage: String?
+
+    init(preferences: PreferencesStore = PreferencesStore()) {
+        self.preferences = preferences
+        cache = CostCache<String, DecodedImage>(
+            costLimit: preferences.cacheLimitMB * 1_024 * 1_024
+        )
+    }
 
     var snapshot: Snapshot {
         Snapshot(
@@ -79,13 +87,16 @@ final class ViewerSession {
     }
 
     func open(folder: URL) throws {
-        let items = try FolderScanner().scan(folder: folder, recursive: false)
+        let items = try FolderScanner().scan(
+            folder: folder,
+            recursive: preferences.recursiveScan
+        )
         index.replaceItems(MediaItemSorter.sorted(items, by: .name))
         decodeCurrent()
     }
 
     func move(_ direction: NavigationDirection) {
-        guard index.move(direction) != nil else {
+        guard index.move(direction, wraps: preferences.wrapsNavigation) != nil else {
             return
         }
         decodeCurrent()

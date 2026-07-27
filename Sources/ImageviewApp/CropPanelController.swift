@@ -22,7 +22,7 @@ final class CropPanelController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        panel.title = "Crop"
+        panel.title = L10n.text("crop.title")
         panel.isFloatingPanel = true
         panel.hidesOnDeactivate = false
         super.init(window: panel)
@@ -57,18 +57,18 @@ final class CropPanelController: NSWindowController {
         }
 
         let form = NSGridView(views: [
-            [NSTextField(labelWithString: "Ratio"), aspectPopup],
-            [NSTextField(labelWithString: "Width"), widthField],
-            [NSTextField(labelWithString: "Height"), heightField],
+            [NSTextField(labelWithString: L10n.text("crop.ratio")), aspectPopup],
+            [NSTextField(labelWithString: L10n.text("crop.width")), widthField],
+            [NSTextField(labelWithString: L10n.text("crop.height")), heightField],
         ])
         form.rowSpacing = 10
         form.columnSpacing = 12
         form.column(at: 0).xPlacement = .trailing
 
-        let copyButton = button("Copy", action: #selector(copyImage(_:)))
-        let saveButton = button("Save As…", action: #selector(saveAs(_:)))
-        let overwriteButton = button("Overwrite…", action: #selector(overwrite(_:)))
-        let cancelButton = button("Cancel", action: #selector(cancel(_:)))
+        let copyButton = button(L10n.text("action.copy"), action: #selector(copyImage(_:)))
+        let saveButton = button(L10n.text("action.save_as"), action: #selector(saveAs(_:)))
+        let overwriteButton = button(L10n.text("action.overwrite"), action: #selector(overwrite(_:)))
+        let cancelButton = button(L10n.text("action.cancel"), action: #selector(cancel(_:)))
 
         let primaryButtons = NSStackView(views: [copyButton, saveButton])
         primaryButtons.orientation = .horizontal
@@ -102,9 +102,9 @@ final class CropPanelController: NSWindowController {
     private func title(for aspect: CropAspect) -> String {
         switch aspect {
         case .free:
-            "Free"
+            L10n.text("crop.free")
         case .original:
-            "Original"
+            L10n.text("crop.original")
         case .square:
             "1:1"
         case .oneByTwo:

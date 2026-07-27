@@ -4,6 +4,7 @@ import PackageDescription
 
 let package = Package(
     name: "Imageview",
+    defaultLocalization: "en",
     platforms: [
         .macOS(.v12),
     ],
@@ -15,7 +16,10 @@ let package = Package(
         .target(name: "ImageviewCore"),
         .executableTarget(
             name: "ImageviewApp",
-            dependencies: ["ImageviewCore"]
+            dependencies: ["ImageviewCore"],
+            resources: [
+                .process("Resources"),
+            ]
         ),
         .testTarget(
             name: "ImageviewCoreTests",

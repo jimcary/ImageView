@@ -18,6 +18,9 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         static let grid = NSToolbarItem.Identifier("grid")
         static let thumbnails = NSToolbarItem.Identifier("thumbnails")
         static let inspector = NSToolbarItem.Identifier("inspector")
+        static let pin = NSToolbarItem.Identifier("pin")
+        static let pastePin = NSToolbarItem.Identifier("pastePin")
+        static let ocr = NSToolbarItem.Identifier("ocr")
         static let flexible = NSToolbarItem.Identifier.flexibleSpace
     }
 
@@ -30,6 +33,12 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     private let session = ViewerSession()
     private var cropPanel: CropPanelController?
     private var cropBeforeEditing = NormalizedRect.full
+    private var pinControllers: [PinboardWindowController] = []
+    private var ocrTask: Task<Void, Never>?
+
+    var currentURL: URL? {
+        session.snapshot.current?.url
+    }
 
     init(urls: [URL] = []) {
         let window = NSWindow(
@@ -157,8 +166,54 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         splitView.adjustSubviews()
     }
 
+    @objc func pinCurrentImage(_ sender: Any?) {
+        guard let image = try? session.renderedCurrentImage() else {
+            NSSound.beep()
+            return
+        }
+        showPin(PinboardWindowController(image: NSImage(cgImage: image, size: .zero)))
+    }
+
+    @objc func pinClipboard(_ sender: Any?) {
+        let pasteboard = NSPasteboard.general
+        if let image = NSImage(pasteboard: pasteboard) {
+            showPin(PinboardWindowController(image: image))
+        } else if let text = pasteboard.string(forType: .string), !text.isEmpty {
+            showPin(PinboardWindowController(text: text))
+        } else {
+            NSSound.beep()
+        }
+    }
+
+    @objc func performOCR(_ sender: Any?) {
+        guard SystemCapabilities.ocrAvailable,
+              let image = try? session.renderedCurrentImage() else {
+            NSSound.beep()
+            return
+        }
+        ocrTask?.cancel()
+        window?.title = L10n.text("viewer.recognizing")
+        ocrTask = Task { [weak self] in
+            do {
+                let text = try await OCRController().recognize(image)
+                guard !Task.isCancelled else { return }
+                self?.showPin(PinboardWindowController(text: text))
+                if let snapshot = self?.session.snapshot {
+                    self?.apply(snapshot)
+                }
+            } catch {
+                guard !Task.isCancelled else { return }
+                self?.presentError(title: L10n.text("error.ocr_failed"), error: error)
+                if let snapshot = self?.session.snapshot {
+                    self?.apply(snapshot)
+                }
+            }
+        }
+    }
+
     func windowWillClose(_ notification: Notification) {
         session.cancel()
+        ocrTask?.cancel()
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -167,6 +222,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             ToolbarID.actual, ToolbarID.rotateLeft, ToolbarID.rotateRight,
             ToolbarID.flip, ToolbarID.crop, ToolbarID.flexible,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
+            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr,
         ]
     }
 
@@ -176,6 +232,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             ToolbarID.fit, ToolbarID.actual, ToolbarID.rotateLeft,
             ToolbarID.rotateRight, ToolbarID.flip, ToolbarID.crop,
             ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
+            ToolbarID.pin, ToolbarID.pastePin, ToolbarID.ocr,
         ]
     }
 
@@ -186,31 +243,38 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
     ) -> NSToolbarItem? {
         switch itemIdentifier {
         case ToolbarID.open:
-            toolbarItem(itemIdentifier, label: "Open", symbol: "folder", action: #selector(chooseFiles(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.open"), symbol: "folder", action: #selector(chooseFiles(_:)))
         case ToolbarID.previous:
-            toolbarItem(itemIdentifier, label: "Previous", symbol: "chevron.left", action: #selector(showPrevious(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.previous"), symbol: "chevron.left", action: #selector(showPrevious(_:)))
         case ToolbarID.next:
-            toolbarItem(itemIdentifier, label: "Next", symbol: "chevron.right", action: #selector(showNext(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.next"), symbol: "chevron.right", action: #selector(showNext(_:)))
         case ToolbarID.fit:
-            toolbarItem(itemIdentifier, label: "Fit", symbol: "arrow.up.left.and.arrow.down.right", action: #selector(fitToWindow(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.fit"), symbol: "arrow.up.left.and.arrow.down.right", action: #selector(fitToWindow(_:)))
         case ToolbarID.actual:
-            toolbarItem(itemIdentifier, label: "Actual Size", symbol: "1.magnifyingglass", action: #selector(showActualSize(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.actual"), symbol: "1.magnifyingglass", action: #selector(showActualSize(_:)))
         case ToolbarID.rotateLeft:
-            toolbarItem(itemIdentifier, label: "Rotate Left", symbol: "rotate.left", action: #selector(rotateLeft(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.rotate_left"), symbol: "rotate.left", action: #selector(rotateLeft(_:)))
         case ToolbarID.rotateRight:
-            toolbarItem(itemIdentifier, label: "Rotate Right", symbol: "rotate.right", action: #selector(rotateRight(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.rotate_right"), symbol: "rotate.right", action: #selector(rotateRight(_:)))
         case ToolbarID.flip:
-            toolbarItem(itemIdentifier, label: "Flip", symbol: "arrow.left.and.right.righttriangle.left.righttriangle.right", action: #selector(flipHorizontal(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.flip"), symbol: "arrow.left.and.right.righttriangle.left.righttriangle.right", action: #selector(flipHorizontal(_:)))
         case ToolbarID.crop:
-            toolbarItem(itemIdentifier, label: "Crop", symbol: "crop", action: #selector(beginCrop(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.crop"), symbol: "crop", action: #selector(beginCrop(_:)))
         case ToolbarID.grid:
-            toolbarItem(itemIdentifier, label: "Grid", symbol: "square.grid.3x3", action: #selector(toggleGrid(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.grid"), symbol: "square.grid.3x3", action: #selector(toggleGrid(_:)))
         case ToolbarID.thumbnails:
-            toolbarItem(itemIdentifier, label: "Thumbnails", symbol: "rectangle.bottomthird.inset.filled", action: #selector(toggleThumbnails(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.thumbnails"), symbol: "rectangle.bottomthird.inset.filled", action: #selector(toggleThumbnails(_:)))
         case ToolbarID.inspector:
-            toolbarItem(itemIdentifier, label: "Info", symbol: "info.circle", action: #selector(toggleInspector(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.info"), symbol: "info.circle", action: #selector(toggleInspector(_:)))
+        case ToolbarID.pin:
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.pin"), symbol: "pin", action: #selector(pinCurrentImage(_:)))
+        case ToolbarID.pastePin:
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.pin_clipboard"), symbol: "doc.on.clipboard", action: #selector(pinClipboard(_:)))
+        case ToolbarID.ocr:
+            guard SystemCapabilities.ocrAvailable else { return nil }
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.ocr"), symbol: "text.viewfinder", action: #selector(performOCR(_:)))
         default:
-            nil
+            return nil
         }
     }
 
@@ -239,6 +303,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
 
         thumbnailStrip.translatesAutoresizingMaskIntoConstraints = false
         thumbnailStrip.heightAnchor.constraint(equalToConstant: 104).isActive = true
+        thumbnailStrip.isHidden = !PreferencesStore().showsThumbnails
         centerStack.orientation = .vertical
         centerStack.spacing = 0
         centerStack.addArrangedSubview(contentArea)
@@ -341,7 +406,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             pasteboard.clearContents()
             pasteboard.writeObjects([NSImage(cgImage: image, size: .zero)])
         } catch {
-            presentError(title: "Copy Failed", error: error)
+            presentError(title: L10n.text("error.copy_failed"), error: error)
         }
     }
 
@@ -369,7 +434,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             )
             finishCrop()
         } catch {
-            presentError(title: "Save Failed", error: error)
+            presentError(title: L10n.text("error.save_failed"), error: error)
         }
     }
 
@@ -379,18 +444,18 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         }
         guard let format = exportFormat(for: source) else {
             presentMessage(
-                title: "Cannot Overwrite This Format",
-                message: "Use Save As to export JPEG, PNG, TIFF, or HEIC."
+                title: L10n.text("error.cannot_overwrite_title"),
+                message: L10n.text("error.cannot_overwrite_message")
             )
             return
         }
 
         let alert = NSAlert()
         alert.alertStyle = .warning
-        alert.messageText = "Overwrite Original Image?"
-        alert.informativeText = "Imageview validates a temporary file before replacing the original."
-        alert.addButton(withTitle: "Overwrite")
-        alert.addButton(withTitle: "Cancel")
+        alert.messageText = L10n.text("confirm.overwrite_title")
+        alert.informativeText = L10n.text("confirm.overwrite_message")
+        alert.addButton(withTitle: L10n.text("confirm.overwrite_button"))
+        alert.addButton(withTitle: L10n.text("action.cancel"))
         guard alert.runModal() == .alertFirstButtonReturn else {
             return
         }
@@ -399,7 +464,7 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
             try session.overwriteCurrent(format: format, metadataPolicy: .preserve)
             finishCrop()
         } catch {
-            presentError(title: "Overwrite Failed", error: error)
+            presentError(title: L10n.text("error.overwrite_failed"), error: error)
         }
     }
 
@@ -440,5 +505,18 @@ final class ViewerWindowController: NSWindowController, NSWindowDelegate, NSTool
         alert.messageText = title
         alert.informativeText = message
         alert.runModal()
+    }
+
+    private func showPin(_ controller: PinboardWindowController) {
+        pinControllers.removeAll { $0.window == nil }
+        controller.onClose = { [weak self, weak controller] in
+            guard let controller else { return }
+            self?.pinControllers.removeAll { $0 === controller }
+        }
+        pinControllers.append(controller)
+        controller.window?.alphaValue = PreferencesStore().pinOpacity
+        controller.showWindow(nil)
+        controller.window?.center()
+        controller.window?.orderFrontRegardless()
     }
 }
