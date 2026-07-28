@@ -8,6 +8,16 @@ public enum NavigationDirection: Sendable {
     case random
 }
 
+public struct NavigationResult: Sendable {
+    public let item: MediaItem
+    public let enteredFinalItem: Bool
+
+    public init(item: MediaItem, enteredFinalItem: Bool) {
+        self.item = item
+        self.enteredFinalItem = enteredFinalItem
+    }
+}
+
 public enum MediaSortOrder: Sendable {
     case name
     case `extension`
@@ -182,12 +192,13 @@ public struct MediaIndex: Sendable {
     public mutating func move(
         _ direction: NavigationDirection,
         wraps: Bool = true
-    ) -> MediaItem? {
+    ) -> NavigationResult? {
         guard !items.isEmpty else {
             currentIndex = nil
             return nil
         }
 
+        let previousIndex = currentIndex
         let index = currentIndex ?? 0
         switch direction {
         case .first:
@@ -201,6 +212,22 @@ public struct MediaIndex: Sendable {
         case .random:
             currentIndex = Int.random(in: items.indices)
         }
-        return current
+        guard let current else {
+            return nil
+        }
+        let movesForward: Bool
+        if case .next = direction {
+            movesForward = true
+        } else {
+            movesForward = false
+        }
+        let enteredFinalItem = movesForward
+            && items.count > 1
+            && previousIndex != items.indices.last
+            && currentIndex == items.indices.last
+        return NavigationResult(
+            item: current,
+            enteredFinalItem: enteredFinalItem
+        )
     }
 }

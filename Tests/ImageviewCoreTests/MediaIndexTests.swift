@@ -114,6 +114,30 @@ func navigationNeverIndexesAnEmptyCollection() {
 }
 
 @Test
+func forwardNavigationReportsOnlyWhenItEntersTheFinalItem() {
+    let items = mediaFixtures(["a.jpg", "b.jpg", "c.jpg"])
+    var index = MediaIndex(items: items)
+
+    #expect(index.move(.next)?.enteredFinalItem == false)
+    #expect(index.move(.next)?.enteredFinalItem == true)
+    #expect(index.move(.next)?.enteredFinalItem == false)
+    #expect(index.currentIndex == 0)
+}
+
+@Test
+func finalItemReportExcludesBackwardSingleAndEmptyNavigation() {
+    let items = mediaFixtures(["a.jpg", "b.jpg"])
+    var index = MediaIndex(items: items)
+    #expect(index.move(.previous)?.enteredFinalItem == false)
+
+    var single = MediaIndex(items: [items[0]])
+    #expect(single.move(.next)?.enteredFinalItem == false)
+
+    var empty = MediaIndex(items: [])
+    #expect(empty.move(.next) == nil)
+}
+
+@Test
 func mediaSortingSupportsNameExtensionDatesFinderOrderAndLabels() {
     let items = [
         MediaItem(

@@ -40,6 +40,21 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertTrue(app.windows["blue.jpg · 1 / 4"].waitForExistence(timeout: 5))
     }
 
+    func testManualNextShowsAlertAfterEnteringLastImage() {
+        let blueURL = fixturesURL.appendingPathComponent("blue.jpg")
+        let greenURL = fixturesURL.appendingPathComponent("green.png")
+        let redURL = fixturesURL.appendingPathComponent("red.png")
+        app.terminate()
+        launchApp(opening: [blueURL, greenURL, redURL])
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 3"].waitForExistence(timeout: 5))
+
+        app.toolbars.buttons["Next"].click()
+        app.toolbars.buttons["Next"].click()
+
+        XCTAssertTrue(app.windows["red.png · 3 / 3"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.alerts["Last Image"].waitForExistence(timeout: 5))
+    }
+
     func testToolbarUsesDeleteAndOmitsRemovedButtons() {
         XCTAssertTrue(app.toolbars.buttons["Delete"].exists)
         XCTAssertFalse(app.toolbars.buttons["Pin Image"].exists)

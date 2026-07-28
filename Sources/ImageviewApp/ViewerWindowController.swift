@@ -65,6 +65,7 @@ final class ViewerWindowController:
     private var subjectTask: Task<Void, Never>?
     private var thumbnailHeightConstraint: NSLayoutConstraint?
     private var lastPresentedMediaID: MediaItem.ID?
+    private var pendingLastImageAlertMediaID: MediaItem.ID?
     private var selectedSortOrder: MediaSortOrder = .name
 
     var currentURL: URL? {
@@ -167,11 +168,21 @@ final class ViewerWindowController:
     }
 
     @objc func showPrevious(_ sender: Any?) {
-        session.move(.previous)
+        navigate(.previous)
     }
 
     @objc func showNext(_ sender: Any?) {
-        session.move(.next)
+        navigate(.next)
+    }
+
+    private func navigate(_ direction: NavigationDirection) {
+        pendingLastImageAlertMediaID = nil
+        guard let result = session.move(direction),
+              result.enteredFinalItem else {
+            return
+        }
+        pendingLastImageAlertMediaID = result.item.id
+        presentPendingLastImageAlertIfReady(session.snapshot)
     }
 
     @objc func showPreviousPage(_ sender: Any?) {
@@ -661,7 +672,7 @@ final class ViewerWindowController:
             }
         }
         canvas.onNavigate = { [weak self] forward in
-            self?.session.move(forward ? .next : .previous)
+            self?.navigate(forward ? .next : .previous)
         }
         canvas.onBeginCropRequested = { [weak self] in
             guard let self else {
@@ -744,6 +755,33 @@ final class ViewerWindowController:
             window?.representedURL = nil
         }
         window?.toolbar?.validateVisibleItems()
+        presentPendingLastImageAlertIfReady(snapshot)
+    }
+
+    private func presentPendingLastImageAlertIfReady(
+        _ snapshot: ViewerSession.Snapshot
+    ) {
+        guard let pendingLastImageAlertMediaID else {
+            return
+        }
+        guard snapshot.current?.id == pendingLastImageAlertMediaID else {
+            self.pendingLastImageAlertMediaID = nil
+            return
+        }
+        guard snapshot.image != nil else {
+            return
+        }
+        self.pendingLastImageAlertMediaID = nil
+        DispatchQueue.main.async { [weak self] in
+            guard let self,
+                  self.session.snapshot.current?.id == pendingLastImageAlertMediaID else {
+                return
+            }
+            self.presentMessage(
+                title: L10n.text("navigation.last_title"),
+                message: L10n.text("navigation.last_message")
+            )
+        }
     }
 
     private func toolbarItem(
