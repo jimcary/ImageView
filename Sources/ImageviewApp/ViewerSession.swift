@@ -357,7 +357,14 @@ final class ViewerSession {
             format: format,
             metadataPolicy: metadataPolicy
         )
-        open(urls: [current.url])
+        let cacheKey = MediaSubimageKey(mediaID: current.id, index: 0)
+        cache.removeValue(for: cacheKey)
+        if protectedCacheKey == cacheKey {
+            protectedCacheKey = nil
+        }
+        let refreshed = FolderScanner().scan(urls: [current.url]).first ?? current
+        _ = index.replaceCurrent(with: refreshed)
+        decodeCurrent()
     }
 
     func cancel() {

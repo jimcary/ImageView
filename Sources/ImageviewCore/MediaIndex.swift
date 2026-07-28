@@ -169,6 +169,16 @@ public struct MediaIndex: Sendable {
     }
 
     @discardableResult
+    public mutating func replaceCurrent(with replacement: MediaItem) -> MediaItem? {
+        guard let currentIndex, items.indices.contains(currentIndex) else {
+            return nil
+        }
+        let previous = items[currentIndex]
+        items[currentIndex] = replacement
+        return previous
+    }
+
+    @discardableResult
     public mutating func move(
         _ direction: NavigationDirection,
         wraps: Bool = true

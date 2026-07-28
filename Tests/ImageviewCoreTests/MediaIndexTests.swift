@@ -51,6 +51,27 @@ func replacingCurrentMetadataAfterResortPreservesSelection() {
 }
 
 @Test
+func replacingCurrentItemPreservesExplicitListAndPosition() {
+    let original = mediaFixtures(["search-a.jpg", "search-b.jpg", "search-c.jpg"])
+    var index = MediaIndex(items: original)
+    index.select(id: original[1].id)
+    let refreshed = MediaItem(
+        url: original[1].url,
+        resourceIdentifier: "replacement-id",
+        fileSize: 999
+    )
+
+    let replaced = index.replaceCurrent(with: refreshed)
+
+    #expect(replaced?.id == original[1].id)
+    #expect(index.items.map(\.url.lastPathComponent) == [
+        "search-a.jpg", "search-b.jpg", "search-c.jpg",
+    ])
+    #expect(index.currentIndex == 1)
+    #expect(index.current?.id == "replacement-id")
+}
+
+@Test
 func deletingCurrentItemSelectsNearestSurvivor() {
     let original = mediaFixtures(["a.jpg", "b.jpg", "c.jpg"])
     var index = MediaIndex(items: original)
