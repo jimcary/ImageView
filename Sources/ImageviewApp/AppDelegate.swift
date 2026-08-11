@@ -29,7 +29,9 @@ final class AppDelegate:
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         configureMainMenu()
-        makeViewer(urls: startupURLs)
+        if windowControllers.isEmpty {
+            makeViewer(urls: startupURLs)
+        }
         NSApp.activate(ignoringOtherApps: true)
     }
 

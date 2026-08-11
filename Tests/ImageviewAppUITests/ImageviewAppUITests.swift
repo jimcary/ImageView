@@ -31,6 +31,7 @@ final class ImageviewAppUITests: XCTestCase {
     }
 
     func testOpenFolderAndNavigateNextAndPrevious() {
+        XCTAssertEqual(app.windows.count, 1)
         XCTAssertTrue(app.windows["blue.jpg · 1 / 4"].waitForExistence(timeout: 5))
 
         app.toolbars.buttons["Next"].click()
