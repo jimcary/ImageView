@@ -114,24 +114,23 @@ func navigationNeverIndexesAnEmptyCollection() {
 }
 
 @Test
-func forwardNavigationReportsOnlyWhenItEntersTheFinalItem() {
+func forwardNavigationWrapsFromFinalToFirst() {
     let items = mediaFixtures(["a.jpg", "b.jpg", "c.jpg"])
     var index = MediaIndex(items: items)
+    index.select(id: items[2].id)
 
-    #expect(index.move(.next)?.enteredFinalItem == false)
-    #expect(index.move(.next)?.enteredFinalItem == true)
-    #expect(index.move(.next)?.enteredFinalItem == false)
+    #expect(index.move(.next)?.id == items[0].id)
     #expect(index.currentIndex == 0)
 }
 
 @Test
-func finalItemReportExcludesBackwardSingleAndEmptyNavigation() {
+func navigationHandlesBackwardSingleAndEmptyCollections() {
     let items = mediaFixtures(["a.jpg", "b.jpg"])
     var index = MediaIndex(items: items)
-    #expect(index.move(.previous)?.enteredFinalItem == false)
+    #expect(index.move(.previous)?.id == items[1].id)
 
     var single = MediaIndex(items: [items[0]])
-    #expect(single.move(.next)?.enteredFinalItem == false)
+    #expect(single.move(.next)?.id == items[0].id)
 
     var empty = MediaIndex(items: [])
     #expect(empty.move(.next) == nil)

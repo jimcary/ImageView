@@ -55,7 +55,7 @@
 "viewer.extracting_subject" = "Extracting Subject…";
 "viewer.page_format" = "Page %d / %d";
 "navigation.last_title" = "Last Image";
-"navigation.last_message" = "You have reached the end of the opened file list.";
+"navigation.last_message" = "You have reached the end. Click OK to return to the first image.";
 "crop.title" = "Crop";
 "crop.ratio" = "Ratio";
 "crop.width" = "Width";

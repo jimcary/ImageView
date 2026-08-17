@@ -41,7 +41,7 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertTrue(app.windows["blue.jpg · 1 / 4"].waitForExistence(timeout: 5))
     }
 
-    func testManualNextShowsAlertAfterEnteringLastImage() {
+    func testManualNextShowsAlertAfterLeavingLastImageThenReturnsToFirst() {
         let blueURL = fixturesURL.appendingPathComponent("blue.jpg")
         let greenURL = fixturesURL.appendingPathComponent("green.png")
         let redURL = fixturesURL.appendingPathComponent("red.png")
@@ -53,7 +53,27 @@ final class ImageviewAppUITests: XCTestCase {
         app.toolbars.buttons["Next"].click()
 
         XCTAssertTrue(app.windows["red.png · 3 / 3"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.alerts["Last Image"].exists)
+
+        app.toolbars.buttons["Next"].click()
         XCTAssertTrue(app.alerts["Last Image"].waitForExistence(timeout: 5))
+        app.alerts["Last Image"].buttons["OK"].click()
+        XCTAssertTrue(app.windows["blue.jpg · 1 / 3"].waitForExistence(timeout: 5))
+    }
+
+    func testRecognizedTextAppearsInSelectableInspector() throws {
+        let textURL = fixturesURL.appendingPathComponent("ocr.png")
+        try writeTextPNG(text: "VISION TEXT", to: textURL)
+        let blueURL = fixturesURL.appendingPathComponent("blue.jpg")
+        app.terminate()
+        launchApp(opening: [textURL, blueURL])
+        XCTAssertTrue(app.windows["ocr.png · 1 / 2"].waitForExistence(timeout: 5))
+
+        app.toolbars.buttons["Recognize Text"].click()
+
+        let recognizedText = app.textViews["inspectorTextView"]
+        XCTAssertTrue(recognizedText.waitForExistence(timeout: 10))
+        XCTAssertTrue((recognizedText.value as? String)?.contains("VISION TEXT") == true)
     }
 
     func testToolbarUsesDeleteAndOmitsRemovedButtons() {
@@ -322,6 +342,26 @@ final class ImageviewAppUITests: XCTestCase {
             properties: [.compressionFactor: 0.9]
         )!
         try data.write(to: directory.appendingPathComponent(name))
+    }
+
+    private func writeTextPNG(text: String, to url: URL) throws {
+        let size = NSSize(width: 1_200, height: 300)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        NSColor.white.setFill()
+        NSBezierPath(rect: NSRect(origin: .zero, size: size)).fill()
+        text.draw(
+            at: NSPoint(x: 80, y: 90),
+            withAttributes: [
+                .font: NSFont.boldSystemFont(ofSize: 96),
+                .foregroundColor: NSColor.black,
+            ]
+        )
+        image.unlockFocus()
+
+        let bitmap = NSBitmapImageRep(data: image.tiffRepresentation!)!
+        let data = bitmap.representation(using: .png, properties: [:])!
+        try data.write(to: url)
     }
 
     private func decodedPixelSize(at url: URL) -> CGSize? {

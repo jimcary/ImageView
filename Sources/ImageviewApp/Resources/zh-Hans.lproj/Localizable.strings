@@ -55,7 +55,7 @@
 "viewer.extracting_subject" = "正在提取主体…";
 "viewer.page_format" = "第 %d / %d 页";
 "navigation.last_title" = "最后一张图片";
-"navigation.last_message" = "已到达打开文件列表的最后一张图片。";
+"navigation.last_message" = "已到达列表末尾，确认后返回第一张图片。";
 "crop.title" = "裁剪";
 "crop.ratio" = "比例";
 "crop.width" = "宽度";

@@ -13,6 +13,7 @@ final class InspectorViewController: NSViewController {
         action: #selector(moveToTrash(_:))
     )
     private var item: MediaItem?
+    private var recognizedText: String?
 
     override func loadView() {
         let root = NSView()
@@ -54,6 +55,7 @@ final class InspectorViewController: NSViewController {
         textView.drawsBackground = false
         textView.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
         textView.textContainerInset = NSSize(width: 8, height: 8)
+        textView.setAccessibilityIdentifier("inspectorTextView")
 
         let scrollView = NSScrollView()
         scrollView.documentView = textView
@@ -79,6 +81,9 @@ final class InspectorViewController: NSViewController {
     }
 
     func update(item: MediaItem?, properties: [CFString: Any]?) {
+        if item?.id != self.item?.id {
+            recognizedText = nil
+        }
         self.item = item
         labelPopup.selectItem(at: max(min(item?.finderLabel ?? 0, 7), 0))
         labelPopup.isEnabled = item != nil
@@ -86,6 +91,10 @@ final class InspectorViewController: NSViewController {
 
         guard let item else {
             textView.string = ""
+            return
+        }
+        if let recognizedText {
+            textView.string = recognizedText
             return
         }
         var lines = [
@@ -108,6 +117,12 @@ final class InspectorViewController: NSViewController {
             })
         }
         textView.string = lines.joined(separator: "\n")
+    }
+
+    func showRecognizedText(_ text: String, for itemID: MediaItem.ID) {
+        guard item?.id == itemID else { return }
+        recognizedText = text
+        textView.string = text
     }
 
     private func button(_ title: String, action: Selector) -> NSButton {

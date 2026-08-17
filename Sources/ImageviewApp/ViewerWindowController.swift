@@ -65,7 +65,6 @@ final class ViewerWindowController:
     private var subjectTask: Task<Void, Never>?
     private var thumbnailHeightConstraint: NSLayoutConstraint?
     private var lastPresentedMediaID: MediaItem.ID?
-    private var pendingLastImageAlertMediaID: MediaItem.ID?
     private var selectedSortOrder: MediaSortOrder = .name
 
     var currentURL: URL? {
@@ -176,13 +175,18 @@ final class ViewerWindowController:
     }
 
     private func navigate(_ direction: NavigationDirection) {
-        pendingLastImageAlertMediaID = nil
-        guard let result = session.move(direction),
-              result.enteredFinalItem else {
+        let snapshot = session.snapshot
+        if case .next = direction,
+           !snapshot.items.isEmpty,
+           snapshot.position == snapshot.items.count {
+            presentMessage(
+                title: L10n.text("navigation.last_title"),
+                message: L10n.text("navigation.last_message")
+            )
+            session.move(.first)
             return
         }
-        pendingLastImageAlertMediaID = result.item.id
-        presentPendingLastImageAlertIfReady(session.snapshot)
+        session.move(direction)
     }
 
     @objc func showPreviousPage(_ sender: Any?) {
@@ -439,7 +443,8 @@ final class ViewerWindowController:
 
     @objc func performOCR(_ sender: Any?) {
         guard SystemCapabilities.ocrAvailable,
-              let image = try? session.renderedCurrentImage() else {
+              let image = try? session.renderedCurrentImage(),
+              let mediaID = session.snapshot.current?.id else {
             NSSound.beep()
             return
         }
@@ -448,11 +453,13 @@ final class ViewerWindowController:
         ocrTask = Task { [weak self] in
             do {
                 let text = try await OCRController().recognize(image)
-                guard !Task.isCancelled else { return }
-                self?.showPin(PinboardWindowController(text: text))
-                if let snapshot = self?.session.snapshot {
-                    self?.apply(snapshot)
-                }
+                guard !Task.isCancelled,
+                      let self,
+                      self.session.snapshot.current?.id == mediaID else { return }
+                self.apply(self.session.snapshot)
+                self.inspectorController.showRecognizedText(text, for: mediaID)
+                self.inspectorController.view.isHidden = false
+                self.splitView.adjustSubviews()
             } catch {
                 guard !Task.isCancelled else { return }
                 self?.presentError(title: L10n.text("error.ocr_failed"), error: error)
@@ -755,33 +762,6 @@ final class ViewerWindowController:
             window?.representedURL = nil
         }
         window?.toolbar?.validateVisibleItems()
-        presentPendingLastImageAlertIfReady(snapshot)
-    }
-
-    private func presentPendingLastImageAlertIfReady(
-        _ snapshot: ViewerSession.Snapshot
-    ) {
-        guard let pendingLastImageAlertMediaID else {
-            return
-        }
-        guard snapshot.current?.id == pendingLastImageAlertMediaID else {
-            self.pendingLastImageAlertMediaID = nil
-            return
-        }
-        guard snapshot.image != nil else {
-            return
-        }
-        self.pendingLastImageAlertMediaID = nil
-        DispatchQueue.main.async { [weak self] in
-            guard let self,
-                  self.session.snapshot.current?.id == pendingLastImageAlertMediaID else {
-                return
-            }
-            self.presentMessage(
-                title: L10n.text("navigation.last_title"),
-                message: L10n.text("navigation.last_message")
-            )
-        }
     }
 
     private func toolbarItem(

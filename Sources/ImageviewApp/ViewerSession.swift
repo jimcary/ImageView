@@ -157,16 +157,16 @@ final class ViewerSession {
     }
 
     @discardableResult
-    func move(_ direction: NavigationDirection) -> NavigationResult? {
+    func move(_ direction: NavigationDirection) -> MediaItem? {
         stopFramePlayback()
-        guard let result = index.move(
+        guard let item = index.move(
             direction,
             wraps: preferences.wrapsNavigation
         ) else {
             return nil
         }
         decodeCurrent()
-        return result
+        return item
     }
 
     func select(id: MediaItem.ID) {
