@@ -6,7 +6,8 @@ final class InspectorViewController: NSViewController {
     var onDeleteRequested: (() -> Void)?
     var onFinderLabelChanged: ((Int) -> Void)?
 
-    private let textView = NSTextView()
+    private let textScrollView = NSTextView.scrollableTextView()
+    private lazy var textView = textScrollView.documentView as! NSTextView
     private let labelPopup = NSPopUpButton()
     private lazy var trashButton = button(
         L10n.text("inspector.trash"),
@@ -57,8 +58,7 @@ final class InspectorViewController: NSViewController {
         textView.textContainerInset = NSSize(width: 8, height: 8)
         textView.setAccessibilityIdentifier("inspectorTextView")
 
-        let scrollView = NSScrollView()
-        scrollView.documentView = textView
+        let scrollView = textScrollView
         scrollView.hasVerticalScroller = true
         scrollView.translatesAutoresizingMaskIntoConstraints = false
 
