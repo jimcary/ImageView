@@ -194,6 +194,26 @@ final class ImageviewAppUITests: XCTestCase {
         XCTAssertEqual(app.popUpButtons.firstMatch.value as? String, "Green")
     }
 
+    func testOpenWithKeepsImageviewRunning() {
+        let canvas = app.otherElements["imageCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        canvas.rightClick()
+
+        let openWithItem = app.menus["imageCanvasContextMenu"].menuItems["Open With"]
+        openWithItem.hover()
+        let openWithMenu = openWithItem.menus.firstMatch
+        XCTAssertTrue(openWithMenu.waitForExistence(timeout: 5))
+
+        let previewURL = URL(fileURLWithPath: "/System/Applications/Preview.app")
+        let previewName = FileManager.default.displayName(atPath: previewURL.path)
+        let previewItem = openWithMenu.menuItems[previewName]
+        XCTAssertTrue(previewItem.waitForExistence(timeout: 5))
+        previewItem.click()
+
+        XCTAssertTrue(app.wait(for: .runningBackground, timeout: 5))
+        XCTAssertTrue(app.windows.firstMatch.exists)
+    }
+
     func testGridRoundTripReturnsToViewer() {
         app.toolbars.buttons["Grid"].click()
         XCTAssertTrue(app.collectionViews.firstMatch.waitForExistence(timeout: 5))

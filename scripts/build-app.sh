@@ -32,12 +32,7 @@ cp -R "$repo_root/Sources/ImageviewApp/Resources/en.lproj" "$resources_path/"
 cp -R "$repo_root/Sources/ImageviewApp/Resources/zh-Hans.lproj" "$resources_path/"
 cp "$repo_root/Imageview.icns" "$resources_path/Imageview.icns"
 
-for architecture in x86_64 arm64; do
-    resource_bundle="$repo_root/.build/$architecture-apple-macosx/release/Imageview_ImageviewApp.bundle"
-    test -d "$resource_bundle"
-done
-cp -R "$repo_root/.build/arm64-apple-macosx/release/Imageview_ImageviewApp.bundle" "$resources_path/"
-
+xattr -cr "$staging_path"
 codesign --force --deep --sign - "$staging_path"
 rm -rf "$app_path"
 mv "$staging_path" "$app_path"

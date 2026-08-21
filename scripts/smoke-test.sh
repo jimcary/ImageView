@@ -12,8 +12,16 @@ test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' \
   "$app_path/Contents/Info.plist")" = "Imageview.icns"
 test -f "$app_path/Contents/Resources/en.lproj/Localizable.strings"
 test -f "$app_path/Contents/Resources/zh-Hans.lproj/Localizable.strings"
+if strings "$executable" | grep -F "$repo_root/.build" >/dev/null; then
+    echo "Imageview executable contains a build-machine resource path" >&2
+    exit 1
+fi
 lipo "$executable" -verify_arch x86_64 arm64
 codesign --verify --deep --strict "$app_path"
+if xattr -lr "$app_path" 2>&1 | grep -q 'com.apple.quarantine'; then
+    echo "Imageview.app contains quarantine metadata" >&2
+    exit 1
+fi
 
 "$executable" &
 app_pid=$!

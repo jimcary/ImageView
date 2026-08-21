@@ -70,7 +70,7 @@ final class ImageCanvasView: NSView {
                 operation: .sourceOver,
                 fraction: 1,
                 respectFlipped: true,
-                hints: [.interpolation: NSImageInterpolation.high]
+                hints: [.interpolation: NSNumber(value: NSImageInterpolation.high.rawValue)]
             )
             if cropMode, hasCropSelection {
                 drawCropOverlay(in: drawingRect)

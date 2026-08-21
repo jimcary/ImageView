@@ -388,7 +388,7 @@ final class ViewerWindowController:
             [imageURL],
             withApplicationAt: applicationURL,
             configuration: configuration
-        ) { [weak self] _, error in
+        ) { @Sendable [weak self] _, error in
             guard let error else {
                 return
             }

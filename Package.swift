@@ -16,10 +16,7 @@ let package = Package(
         .target(name: "ImageviewCore"),
         .executableTarget(
             name: "ImageviewApp",
-            dependencies: ["ImageviewCore"],
-            resources: [
-                .process("Resources"),
-            ]
+            dependencies: ["ImageviewCore"]
         ),
         .testTarget(
             name: "ImageviewCoreTests",
