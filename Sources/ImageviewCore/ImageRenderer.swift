@@ -6,12 +6,16 @@ public enum ImageRenderError: Error, Equatable {
     case emptyCrop
     case cropFailed
     case renderFailed
+    case invalidSize
 }
 
 public struct ImageRenderer {
     public init() {}
 
     public func render(_ source: CGImage, recipe: EditRecipe) throws -> CGImage {
+        if let size = recipe.resize, !size.isValid {
+            throw ImageRenderError.invalidSize
+        }
         var output = CIImage(cgImage: source)
         if recipe.flipHorizontal {
             output = output.oriented(.upMirrored)
@@ -53,6 +57,19 @@ public struct ImageRenderer {
         guard let cropped = transformed.cropping(to: cropRect) else {
             throw ImageRenderError.cropFailed
         }
-        return cropped
+        guard let size = recipe.resize else {
+            return cropped
+        }
+        let resized = CIImage(cgImage: cropped).transformed(by: CGAffineTransform(
+            scaleX: CGFloat(size.width) / CGFloat(cropped.width),
+            y: CGFloat(size.height) / CGFloat(cropped.height)
+        ))
+        guard let result = CIContext(options: [.cacheIntermediates: false]).createCGImage(
+            resized,
+            from: CGRect(x: 0, y: 0, width: size.width, height: size.height)
+        ) else {
+            throw ImageRenderError.renderFailed
+        }
+        return result
     }
 }

@@ -274,7 +274,8 @@ final class ViewerSession {
             rotationQuarterTurns: recipe.rotationQuarterTurns + (clockwise ? 1 : -1),
             flipHorizontal: recipe.flipHorizontal,
             flipVertical: recipe.flipVertical,
-            crop: recipe.crop
+            crop: recipe.crop,
+            resize: recipe.resize.map { PixelSize(width: $0.height, height: $0.width) }
         )
         renderRecipe()
     }
@@ -284,19 +285,38 @@ final class ViewerSession {
             rotationQuarterTurns: recipe.rotationQuarterTurns,
             flipHorizontal: horizontal ? !recipe.flipHorizontal : recipe.flipHorizontal,
             flipVertical: horizontal ? recipe.flipVertical : !recipe.flipVertical,
-            crop: recipe.crop
+            crop: recipe.crop,
+            resize: recipe.resize
         )
         renderRecipe()
     }
 
-    func setCrop(_ crop: NormalizedRect) {
+    func setCrop(_ crop: NormalizedRect, originalRecipe: EditRecipe) {
+        let resized = originalRecipe.resize.map { size in
+            PixelSize(
+                width: max(1, Int((CGFloat(size.width) * crop.width).rounded())),
+                height: max(1, Int((CGFloat(size.height) * crop.height).rounded()))
+            )
+        }
         recipe = EditRecipe(
             rotationQuarterTurns: recipe.rotationQuarterTurns,
             flipHorizontal: recipe.flipHorizontal,
             flipVertical: recipe.flipVertical,
-            crop: crop
+            crop: crop,
+            resize: resized
         )
         publish()
+    }
+
+    func resize(width: Int, height: Int) {
+        recipe = EditRecipe(
+            rotationQuarterTurns: recipe.rotationQuarterTurns,
+            flipHorizontal: recipe.flipHorizontal,
+            flipVertical: recipe.flipVertical,
+            crop: recipe.crop,
+            resize: PixelSize(width: width, height: height)
+        )
+        renderRecipe()
     }
 
     func setRecipe(_ recipe: EditRecipe) {

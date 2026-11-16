@@ -4,6 +4,37 @@ import Testing
 @testable import ImageviewCore
 
 @Test
+func rendererResizesAfterRotatingAndCropping() throws {
+    let source = try TestImageFixtures.quadrantImage(width: 80, height: 60)
+    let cropped = try ImageRenderer().render(
+        source,
+        recipe: EditRecipe(rotationQuarterTurns: 1, crop: NormalizedRect(x: 0, y: 0, width: 0.5, height: 1))
+    )
+    let resized = try ImageRenderer().render(
+        source,
+        recipe: EditRecipe(rotationQuarterTurns: 1, crop: NormalizedRect(x: 0, y: 0, width: 0.5, height: 1), resize: PixelSize(width: 15, height: 40))
+    )
+
+    #expect(resized.width == 15)
+    #expect(resized.height == 40)
+    #expect(TestImageFixtures.pixelRGBA(resized, x: 3, y: 3) == TestImageFixtures.pixelRGBA(cropped, x: 6, y: 6))
+}
+
+@Test
+func rendererRejectsInvalidOrExcessiveResize() throws {
+    let source = try TestImageFixtures.image()
+    for size in [
+        PixelSize(width: 0, height: 10),
+        PixelSize(width: 16_385, height: 1),
+        PixelSize(width: 10_001, height: 10_000),
+    ] {
+        #expect(throws: ImageRenderError.invalidSize) {
+            try ImageRenderer().render(source, recipe: EditRecipe(resize: size))
+        }
+    }
+}
+
+@Test
 func rendererCropsAndRotatesRealPixels() throws {
     let source = try TestImageFixtures.image(width: 60, height: 40)
     let recipe = EditRecipe(

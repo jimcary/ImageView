@@ -150,7 +150,7 @@ final class ImageviewAppUITests: XCTestCase {
         let contextMenu = app.menus["imageCanvasContextMenu"]
         XCTAssertTrue(contextMenu.waitForExistence(timeout: 5))
         XCTAssertEqual(contextMenu.menuItems.allElementsBoundByIndex.map { $0.title }, [
-            "Recognize Text", "Actual Size", "Fit to Window", "Sort",
+            "Recognize Text", "Actual Size", "Fit to Window", "Resize", "Sort",
             "Image Processing", "Finder Label", "Pin to Desktop",
             "Show in Finder", "Open Default", "Open With", "Copy", "Delete",
         ])
@@ -212,6 +212,22 @@ final class ImageviewAppUITests: XCTestCase {
 
         XCTAssertTrue(app.wait(for: .runningBackground, timeout: 5))
         XCTAssertTrue(app.windows.firstMatch.exists)
+    }
+
+    func testResizeImageAndSave() {
+        let originalURL = fixturesURL.appendingPathComponent("blue.jpg")
+        let canvas = app.otherElements["imageCanvas"]
+        XCTAssertTrue(canvas.waitForExistence(timeout: 5))
+        canvas.rightClick()
+        app.menus["imageCanvasContextMenu"].menuItems["Resize"].click()
+        let width = app.textFields["resizeWidth"]
+        XCTAssertTrue(width.waitForExistence(timeout: 5))
+        width.click()
+        width.typeKey("a", modifierFlags: .command)
+        width.typeText("400")
+        app.buttons["OK"].click()
+        app.typeKey("s", modifierFlags: .command)
+        XCTAssertTrue(waitForDecodedPixelSize(at: originalURL, equalTo: CGSize(width: 400, height: 300)))
     }
 
     func testGridRoundTripReturnsToViewer() {

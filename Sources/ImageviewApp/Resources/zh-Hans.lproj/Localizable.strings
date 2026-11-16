@@ -64,6 +64,16 @@
 "crop.preserve_metadata" = "保留元数据";
 "crop.free" = "自由";
 "crop.original" = "原始比例";
+"menu.resize" = "调整大小…";
+"resize.title" = "调整图像大小";
+"resize.menu" = "调整大小";
+"resize.fit" = "适合";
+"resize.custom" = "自定义";
+"resize.unit" = "单位";
+"resize.pixels" = "像素";
+"resize.proportional" = "比例缩放";
+"resize.apply" = "好";
+"resize.invalid" = "宽高须为 1–16,384 像素，总像素数不能超过 1 亿。";
 "action.copy" = "复制";
 "action.save_as" = "另存为…";
 "action.overwrite" = "覆盖原图…";

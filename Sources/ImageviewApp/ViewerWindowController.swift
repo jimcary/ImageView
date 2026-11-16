@@ -254,6 +254,19 @@ final class ViewerWindowController:
         session.flip(horizontal: false)
     }
 
+    @objc func resizeImage(_ sender: Any?) {
+        guard !canvas.isCropMode, session.snapshot.subimageCount == 1,
+              let image = session.snapshot.image,
+              session.snapshot.decodedMediaID == session.snapshot.current?.id else {
+            NSSound.beep()
+            return
+        }
+        guard let size = ResizeDialog.run(width: image.width, height: image.height) else {
+            return
+        }
+        session.resize(width: size.width, height: size.height)
+    }
+
     @objc func beginCrop(_ sender: Any?) {
         if canvas.isCropMode {
             window?.makeFirstResponder(canvas)
@@ -689,7 +702,8 @@ final class ViewerWindowController:
             return self.canvas.isCropMode
         }
         canvas.onCropChanged = { [weak self] crop in
-            self?.session.setCrop(crop)
+            guard let self, let originalRecipe = self.cropTransaction?.originalRecipe else { return }
+            self.session.setCrop(crop, originalRecipe: originalRecipe)
         }
         canvas.onCancelCrop = { [weak self] in
             self?.cancelCrop(nil)
@@ -800,6 +814,12 @@ final class ViewerWindowController:
             contextMenuItem(
                 L10n.text("menu.fit"),
                 action: #selector(fitToWindow(_:))
+            )
+        )
+        menu.addItem(
+            contextMenuItem(
+                L10n.text("resize.menu"),
+                action: #selector(resizeImage(_:))
             )
         )
         menu.addItem(.separator())
@@ -923,6 +943,11 @@ final class ViewerWindowController:
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(resizeImage(_:)) {
+            let snapshot = session.snapshot
+            return !canvas.isCropMode && snapshot.subimageCount == 1 && snapshot.image != nil
+                && snapshot.decodedMediaID == snapshot.current?.id
+        }
         if menuItem.submenu === openWithMenu {
             return session.snapshot.current != nil
         }
@@ -942,6 +967,7 @@ final class ViewerWindowController:
             #selector(performOCR(_:)),
             #selector(showActualSize(_:)),
             #selector(fitToWindow(_:)),
+            #selector(resizeImage(_:)),
             #selector(rotateLeft(_:)),
             #selector(rotateRight(_:)),
             #selector(flipHorizontal(_:)),

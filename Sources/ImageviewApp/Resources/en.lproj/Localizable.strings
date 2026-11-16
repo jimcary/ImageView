@@ -64,6 +64,16 @@
 "crop.preserve_metadata" = "Preserve metadata";
 "crop.free" = "Free";
 "crop.original" = "Original";
+"menu.resize" = "Resize…";
+"resize.title" = "Resize Image";
+"resize.menu" = "Resize";
+"resize.fit" = "Fit into";
+"resize.custom" = "Custom";
+"resize.unit" = "Unit";
+"resize.pixels" = "Pixels";
+"resize.proportional" = "Scale proportionally";
+"resize.apply" = "OK";
+"resize.invalid" = "Enter dimensions from 1 to 16,384 pixels, with at most 100 million pixels in total.";
 "action.copy" = "Copy";
 "action.save_as" = "Save As…";
 "action.overwrite" = "Overwrite…";

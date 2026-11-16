@@ -19,9 +19,10 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
     private var selectedID: MediaItem.ID?
 
     override func loadView() {
-        let root = NSView()
-        root.wantsLayer = true
-        root.layer?.backgroundColor = NSColor(calibratedWhite: 0.1, alpha: 1).cgColor
+        let root = NSVisualEffectView()
+        root.material = .contentBackground
+        root.blendingMode = .withinWindow
+        root.state = .active
 
         formatPopup.target = self
         formatPopup.action = #selector(filterChanged(_:))
@@ -45,15 +46,15 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
             labelPopup,
         ])
         controls.orientation = .horizontal
-        controls.spacing = 8
+        controls.spacing = 10
         controls.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(controls)
 
         let layout = NSCollectionViewFlowLayout()
         layout.itemSize = NSSize(width: 150, height: 150)
-        layout.minimumInteritemSpacing = 12
-        layout.minimumLineSpacing = 12
-        layout.sectionInset = NSEdgeInsets(top: 14, left: 14, bottom: 14, right: 14)
+        layout.minimumInteritemSpacing = 16
+        layout.minimumLineSpacing = 16
+        layout.sectionInset = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
         collectionView.collectionViewLayout = layout
         collectionView.dataSource = self
         collectionView.delegate = self
@@ -72,8 +73,9 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         root.addSubview(scrollView)
 
         NSLayoutConstraint.activate([
-            controls.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 12),
-            controls.topAnchor.constraint(equalTo: root.topAnchor, constant: 10),
+            controls.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
+            controls.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -16),
+            controls.topAnchor.constraint(equalTo: root.topAnchor, constant: 14),
             scrollView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
             scrollView.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 8),

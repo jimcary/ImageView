@@ -12,7 +12,9 @@ final class MediaCollectionItem: NSCollectionViewItem {
     override func loadView() {
         let container = NSView()
         container.wantsLayer = true
-        container.layer?.cornerRadius = 6
+        container.layer?.cornerRadius = 10
+        container.layer?.borderWidth = 1.5
+        container.layer?.borderColor = NSColor.clear.cgColor
 
         let imageView = NSImageView()
         imageView.imageScaling = .scaleProportionallyUpOrDown
@@ -22,7 +24,7 @@ final class MediaCollectionItem: NSCollectionViewItem {
 
         nameLabel.alignment = .center
         nameLabel.lineBreakMode = .byTruncatingMiddle
-        nameLabel.font = .systemFont(ofSize: 11)
+        nameLabel.font = .systemFont(ofSize: 11, weight: .medium)
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(nameLabel)
 
@@ -42,7 +44,10 @@ final class MediaCollectionItem: NSCollectionViewItem {
     override var isSelected: Bool {
         didSet {
             view.layer?.backgroundColor = isSelected
-                ? NSColor.controlAccentColor.withAlphaComponent(0.35).cgColor
+                ? NSColor.controlAccentColor.withAlphaComponent(0.18).cgColor
+                : NSColor.clear.cgColor
+            view.layer?.borderColor = isSelected
+                ? NSColor.controlAccentColor.cgColor
                 : NSColor.clear.cgColor
         }
     }

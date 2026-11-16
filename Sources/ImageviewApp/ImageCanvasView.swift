@@ -340,16 +340,29 @@ final class ImageCanvasView: NSView {
     }
 
     private func drawCentered(_ message: String) {
+        if errorMessage == nil, !isLoading,
+           let symbol = NSImage(systemSymbolName: "photo.on.rectangle", accessibilityDescription: nil) {
+            let configuration = NSImage.SymbolConfiguration(pointSize: 42, weight: .light)
+            let image = symbol.withSymbolConfiguration(configuration) ?? symbol
+            image.draw(
+                in: CGRect(x: bounds.midX - 28, y: bounds.midY - 64, width: 56, height: 56),
+                from: .zero,
+                operation: .sourceOver,
+                fraction: 0.55,
+                respectFlipped: true,
+                hints: nil
+            )
+        }
         let style = NSMutableParagraphStyle()
         style.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 15),
-            .foregroundColor: NSColor.secondaryLabelColor,
+            .font: NSFont.systemFont(ofSize: 14, weight: .medium),
+            .foregroundColor: NSColor.white.withAlphaComponent(0.72),
             .paragraphStyle: style,
         ]
         let textRect = CGRect(
             x: 40,
-            y: bounds.midY - 20,
+            y: bounds.midY + (errorMessage == nil && !isLoading ? 8 : -10),
             width: max(bounds.width - 80, 0),
             height: 40
         )

@@ -18,22 +18,40 @@ public struct NormalizedRect: Equatable, Hashable, Sendable {
     }
 }
 
+public struct PixelSize: Equatable, Hashable, Sendable {
+    public let width: Int
+    public let height: Int
+
+    public init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+
+    public var isValid: Bool {
+        width > 0 && height > 0 && width <= 16_384 && height <= 16_384
+            && width * height <= 100_000_000
+    }
+}
+
 public struct EditRecipe: Equatable, Hashable, Sendable {
     public let rotationQuarterTurns: Int
     public let flipHorizontal: Bool
     public let flipVertical: Bool
     public let crop: NormalizedRect
+    public let resize: PixelSize?
 
     public init(
         rotationQuarterTurns: Int = 0,
         flipHorizontal: Bool = false,
         flipVertical: Bool = false,
-        crop: NormalizedRect = .full
+        crop: NormalizedRect = .full,
+        resize: PixelSize? = nil
     ) {
         self.rotationQuarterTurns = ((rotationQuarterTurns % 4) + 4) % 4
         self.flipHorizontal = flipHorizontal
         self.flipVertical = flipVertical
         self.crop = crop
+        self.resize = resize
     }
 }
 
