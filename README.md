@@ -1,4 +1,8 @@
-# Imageview
+<p align="center">
+  <img src="assets/ImageView-app-icon.png" alt="ImageView 应用图标" width="128">
+</p>
+
+<h1 align="center">ImageView</h1>
 
 Imageview is a local macOS image viewer for macOS 12 and later. It is a universal app: the packaged release includes both Apple Silicon and Intel executables.
 
