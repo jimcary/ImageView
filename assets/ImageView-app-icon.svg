@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 256 256">
+  <title>ImageView app icon</title>
+  <defs>
+    <linearGradient id="tile" x1="32" y1="24" x2="224" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E9F8FF"/>
+      <stop offset="1" stop-color="#83C8F6"/>
+    </linearGradient>
+    <linearGradient id="sky" x1="90" y1="90" x2="190" y2="190" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D9F4FF"/>
+      <stop offset="1" stop-color="#89D7F3"/>
+    </linearGradient>
+  </defs>
+  <rect x="24" y="24" width="208" height="208" rx="48" fill="url(#tile)"/>
+  <rect x="51" y="52" width="140" height="131" rx="23" fill="#77B6E2" opacity="0.28"/>
+  <rect x="50" y="48" width="140" height="131" rx="23" fill="#F8FDFF"/>
+  <rect x="59" y="57" width="122" height="113" rx="15" fill="#C3E9F8"/>
+  <rect x="75" y="78" width="140" height="131" rx="23" fill="#478FCA" opacity="0.20"/>
+  <rect x="74" y="74" width="140" height="131" rx="23" fill="#FFFFFF"/>
+  <rect x="83" y="83" width="122" height="113" rx="15" fill="url(#sky)"/>
+  <circle cx="168" cy="112" r="13" fill="#FFCE66"/>
+  <path d="M83 162C99 150 110 132 126 132C141 132 148 151 163 151C178 151 188 140 205 131V181C205 189.28 198.28 196 190 196H98C89.72 196 83 189.28 83 181V162Z" fill="#70C4C9"/>
+  <path d="M83 176C104 166 115 157 130 157C146 157 154 171 169 171C183 171 193 164 205 157V181C205 189.28 198.28 196 190 196H98C89.72 196 83 189.28 83 181V176Z" fill="#38A8B8"/>
+</svg>
