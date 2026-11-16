@@ -12,6 +12,8 @@ test "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' \
   "$app_path/Contents/Info.plist")" = "Imageview.icns"
 test -f "$app_path/Contents/Resources/en.lproj/Localizable.strings"
 test -f "$app_path/Contents/Resources/zh-Hans.lproj/Localizable.strings"
+test -f "$app_path/Contents/Resources/libwebp-LICENSE.txt"
+test -f "$app_path/Contents/Resources/libwebp-PATENTS.txt"
 if strings "$executable" | grep -F "$repo_root/.build" >/dev/null; then
     echo "Imageview executable contains a build-machine resource path" >&2
     exit 1

@@ -18,6 +18,7 @@
 "menu.crop_and_save" = "Crop and Save";
 "menu.sort" = "Sort";
 "menu.image_processing" = "Image Processing";
+"menu.convert_format" = "Convert Format";
 "menu.finder_label" = "Finder Label";
 "menu.pin_desktop" = "Pin to Desktop";
 "menu.delete" = "Delete";
@@ -80,6 +81,7 @@
 "action.cancel" = "Cancel";
 "error.copy_failed" = "Copy Failed";
 "error.save_failed" = "Save Failed";
+"error.target_exists" = "A file already exists at this location. Choose a different name.";
 "error.overwrite_failed" = "Overwrite Failed";
 "error.ocr_failed" = "Text Recognition Failed";
 "error.subject_failed" = "Subject Extraction Failed";

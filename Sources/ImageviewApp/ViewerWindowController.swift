@@ -1,5 +1,6 @@
 import AppKit
 import ImageviewCore
+import UniformTypeIdentifiers
 
 private final class ViewerWindow: NSWindow {
     var onDeleteRequested: (() -> Bool)?
@@ -265,6 +266,43 @@ final class ViewerWindowController:
             return
         }
         session.resize(width: size.width, height: size.height)
+    }
+
+    @objc private func convertImage(_ sender: NSMenuItem) {
+        guard let current = session.snapshot.current,
+              session.snapshot.decodedMediaID == current.id,
+              !canvas.isCropMode,
+              let ext = sender.representedObject as? String else { return }
+        let format: ExportFormat
+        switch ext {
+        case "jpg": format = .jpeg(quality: 0.9)
+        case "png": format = .png
+        case "gif": format = .gif
+        case "webp": format = .webp(quality: 0.9)
+        default: return
+        }
+
+        let panel = NSSavePanel()
+        panel.directoryURL = current.url.deletingLastPathComponent()
+        panel.nameFieldStringValue = current.url.deletingPathExtension().lastPathComponent + "-converted." + ext
+        panel.allowedContentTypes = [UTType(filenameExtension: ext) ?? UTType(importedAs: "org.webmproject.webp")]
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        guard session.snapshot.current?.id == current.id,
+              session.snapshot.decodedMediaID == current.id else { return }
+        do {
+            let image = try session.renderedCurrentImage()
+            try ExportCoordinator().saveAs(
+                image: image,
+                sourceProperties: ExportMetadata.adjustedProperties(session.snapshot.sourceProperties ?? [:], renderedImage: image),
+                destinationURL: destination,
+                format: format,
+                metadataPolicy: .preserve
+            )
+        } catch ExportError.targetExists {
+            presentMessage(title: L10n.text("error.save_failed"), message: L10n.text("error.target_exists"))
+        } catch {
+            presentError(title: L10n.text("error.save_failed"), error: error)
+        }
     }
 
     @objc func beginCrop(_ sender: Any?) {
@@ -822,6 +860,15 @@ final class ViewerWindowController:
                 action: #selector(resizeImage(_:))
             )
         )
+        let convertMenu = NSMenu(title: L10n.text("menu.convert_format"))
+        for ext in ["jpg", "png", "gif", "webp"] {
+            let item = contextMenuItem(ext.uppercased(), action: #selector(convertImage(_:)))
+            item.representedObject = ext
+            convertMenu.addItem(item)
+        }
+        let convertItem = NSMenuItem(title: L10n.text("menu.convert_format"), action: nil, keyEquivalent: "")
+        convertItem.submenu = convertMenu
+        menu.addItem(convertItem)
         menu.addItem(.separator())
 
         let sortMenu = NSMenu(title: L10n.text("menu.sort"))
@@ -943,6 +990,11 @@ final class ViewerWindowController:
     }
 
     func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(convertImage(_:)) {
+            let snapshot = session.snapshot
+            return !canvas.isCropMode && snapshot.image != nil && snapshot.current != nil
+                && snapshot.decodedMediaID == snapshot.current?.id
+        }
         if menuItem.action == #selector(resizeImage(_:)) {
             let snapshot = session.snapshot
             return !canvas.isCropMode && snapshot.subimageCount == 1 && snapshot.image != nil

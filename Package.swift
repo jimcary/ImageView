@@ -12,8 +12,11 @@ let package = Package(
         .library(name: "ImageviewCore", targets: ["ImageviewCore"]),
         .executable(name: "Imageview", targets: ["ImageviewApp"]),
     ],
+    dependencies: [
+        .package(url: "https://github.com/SDWebImage/libwebp-Xcode.git", exact: "1.6.0"),
+    ],
     targets: [
-        .target(name: "ImageviewCore"),
+        .target(name: "ImageviewCore", dependencies: [.product(name: "libwebp", package: "libwebp-Xcode")]),
         .executableTarget(
             name: "ImageviewApp",
             dependencies: ["ImageviewCore"]

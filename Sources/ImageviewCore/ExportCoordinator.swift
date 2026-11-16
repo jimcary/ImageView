@@ -2,10 +2,13 @@ import CoreGraphics
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
+import libwebp
 
 public enum ExportFormat: Equatable, Sendable {
     case jpeg(quality: Double)
     case png
+    case gif
+    case webp(quality: Double)
     case tiff
     case heic(quality: Double)
     case heif(quality: Double)
@@ -16,6 +19,10 @@ public enum ExportFormat: Equatable, Sendable {
             "jpg"
         case .png:
             "png"
+        case .gif:
+            "gif"
+        case .webp:
+            "webp"
         case .tiff:
             "tiff"
         case .heic:
@@ -31,6 +38,10 @@ public enum ExportFormat: Equatable, Sendable {
             UTType.jpeg.identifier as CFString
         case .png:
             UTType.png.identifier as CFString
+        case .gif:
+            UTType.gif.identifier as CFString
+        case .webp:
+            "org.webmproject.webp" as CFString
         case .tiff:
             UTType.tiff.identifier as CFString
         case .heic:
@@ -42,9 +53,9 @@ public enum ExportFormat: Equatable, Sendable {
 
     var quality: Double? {
         switch self {
-        case let .jpeg(quality), let .heic(quality), let .heif(quality):
+        case let .jpeg(quality), let .heic(quality), let .heif(quality), let .webp(quality):
             min(max(quality, 0), 1)
-        case .png, .tiff:
+        case .png, .gif, .tiff:
             nil
         }
     }
@@ -167,28 +178,32 @@ public struct ExportCoordinator {
             }
         }
 
-        guard let destination = CGImageDestinationCreateWithURL(
-            temporaryURL as CFURL,
-            format.typeIdentifier,
-            1,
-            nil
-        ) else {
-            throw ExportError.cannotCreateDestination
-        }
+        if case .webp = format {
+            try writeWebP(image, to: temporaryURL, quality: format.quality ?? 0.9)
+        } else {
+            guard let destination = CGImageDestinationCreateWithURL(
+                temporaryURL as CFURL,
+                format.typeIdentifier,
+                1,
+                nil
+            ) else {
+                throw ExportError.cannotCreateDestination
+            }
 
-        var properties: [CFString: Any]
-        switch metadataPolicy {
-        case .preserve:
-            properties = sourceProperties ?? [:]
-        case .remove:
-            properties = [:]
-        }
-        if let quality = format.quality {
-            properties[kCGImageDestinationLossyCompressionQuality] = quality
-        }
-        CGImageDestinationAddImage(destination, image, properties as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else {
-            throw ExportError.finalizeFailed
+            var properties: [CFString: Any]
+            switch metadataPolicy {
+            case .preserve:
+                properties = sourceProperties ?? [:]
+            case .remove:
+                properties = [:]
+            }
+            if let quality = format.quality {
+                properties[kCGImageDestinationLossyCompressionQuality] = quality
+            }
+            CGImageDestinationAddImage(destination, image, properties as CFDictionary)
+            guard CGImageDestinationFinalize(destination) else {
+                throw ExportError.finalizeFailed
+            }
         }
         guard validator(
             temporaryURL,
@@ -197,6 +212,42 @@ public struct ExportCoordinator {
             throw ExportError.validationFailed
         }
         shouldRemoveTemporaryFile = false
+    }
+
+    private func writeWebP(_ image: CGImage, to url: URL, quality: Double) throws {
+        let width = image.width
+        let height = image.height
+        guard width > 0, height > 0, width <= 16_383, height <= 16_383,
+              width * height <= 100_000_000 else {
+            throw ExportError.cannotCreateDestination
+        }
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        let success = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(
+                data: buffer.baseAddress, width: width, height: height,
+                bitsPerComponent: 8, bytesPerRow: width * 4,
+                space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return false }
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            return true
+        }
+        guard success else { throw ExportError.cannotCreateDestination }
+        for index in stride(from: 0, to: pixels.count, by: 4) {
+            let alpha = Int(pixels[index + 3])
+            if alpha > 0 && alpha < 255 {
+                for channel in 0..<3 {
+                    pixels[index + channel] = UInt8(min(255, (Int(pixels[index + channel]) * 255 + alpha / 2) / alpha))
+                }
+            }
+        }
+        var output: UnsafeMutablePointer<UInt8>?
+        let size = pixels.withUnsafeBufferPointer {
+            WebPEncodeRGBA($0.baseAddress, Int32(width), Int32(height), Int32(width * 4), Float(quality * 100), &output)
+        }
+        guard size > 0, let output else { throw ExportError.finalizeFailed }
+        defer { WebPFree(output) }
+        try Data(bytes: output, count: size).write(to: url)
     }
 
     private func siblingTemporaryURL(for destination: URL, format: ExportFormat) -> URL {

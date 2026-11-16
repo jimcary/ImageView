@@ -18,6 +18,7 @@
 "menu.crop_and_save" = "裁剪并保存";
 "menu.sort" = "排序";
 "menu.image_processing" = "图像处理";
+"menu.convert_format" = "格式转换";
 "menu.finder_label" = "Finder 标签";
 "menu.pin_desktop" = "贴到桌面";
 "menu.delete" = "删除";
@@ -80,6 +81,7 @@
 "action.cancel" = "取消";
 "error.copy_failed" = "复制失败";
 "error.save_failed" = "保存失败";
+"error.target_exists" = "该位置已有同名文件，请选择其他文件名。";
 "error.overwrite_failed" = "覆盖失败";
 "error.ocr_failed" = "文字识别失败";
 "error.subject_failed" = "主体提取失败";

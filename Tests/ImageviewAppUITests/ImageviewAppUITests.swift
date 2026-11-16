@@ -150,10 +150,16 @@ final class ImageviewAppUITests: XCTestCase {
         let contextMenu = app.menus["imageCanvasContextMenu"]
         XCTAssertTrue(contextMenu.waitForExistence(timeout: 5))
         XCTAssertEqual(contextMenu.menuItems.allElementsBoundByIndex.map { $0.title }, [
-            "Recognize Text", "Actual Size", "Fit to Window", "Resize", "Sort",
+            "Recognize Text", "Actual Size", "Fit to Window", "Resize", "Convert Format", "Sort",
             "Image Processing", "Finder Label", "Pin to Desktop",
             "Show in Finder", "Open Default", "Open With", "Copy", "Delete",
         ])
+
+        let convertItem = contextMenu.menuItems["Convert Format"]
+        convertItem.hover()
+        let convertMenu = convertItem.menus.firstMatch
+        XCTAssertTrue(convertMenu.waitForExistence(timeout: 5))
+        XCTAssertEqual(convertMenu.menuItems.allElementsBoundByIndex.map { $0.title }, ["JPG", "PNG", "GIF", "WEBP"])
 
         let sortItem = contextMenu.menuItems["Sort"]
         sortItem.hover()
