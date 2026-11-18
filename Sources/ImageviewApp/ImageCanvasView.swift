@@ -48,7 +48,6 @@ final class ImageCanvasView: NSView {
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         wantsLayer = true
-        layer?.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1).cgColor
         registerForDraggedTypes([.fileURL])
         setAccessibilityIdentifier("imageCanvas")
     }
@@ -59,7 +58,7 @@ final class ImageCanvasView: NSView {
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
-        NSColor(calibratedWhite: 0.08, alpha: 1).setFill()
+        NSColor.controlBackgroundColor.setFill()
         bounds.fill()
 
         if let image {
@@ -343,12 +342,13 @@ final class ImageCanvasView: NSView {
         if errorMessage == nil, !isLoading,
            let symbol = NSImage(systemSymbolName: "photo.on.rectangle", accessibilityDescription: nil) {
             let configuration = NSImage.SymbolConfiguration(pointSize: 42, weight: .light)
+                .applying(NSImage.SymbolConfiguration(paletteColors: [.secondaryLabelColor]))
             let image = symbol.withSymbolConfiguration(configuration) ?? symbol
             image.draw(
                 in: CGRect(x: bounds.midX - 28, y: bounds.midY - 64, width: 56, height: 56),
                 from: .zero,
                 operation: .sourceOver,
-                fraction: 0.55,
+                fraction: 1,
                 respectFlipped: true,
                 hints: nil
             )
@@ -357,7 +357,7 @@ final class ImageCanvasView: NSView {
         style.alignment = .center
         let attributes: [NSAttributedString.Key: Any] = [
             .font: NSFont.systemFont(ofSize: 14, weight: .medium),
-            .foregroundColor: NSColor.white.withAlphaComponent(0.72),
+            .foregroundColor: NSColor.secondaryLabelColor,
             .paragraphStyle: style,
         ]
         let textRect = CGRect(

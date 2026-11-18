@@ -7,6 +7,8 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
     var onSortChanged: ((MediaSortOrder) -> Void)?
 
     private let collectionView = NSCollectionView()
+    private let controlsScrollView = NSScrollView()
+    private var controls: NSStackView?
     private let formatPopup = NSPopUpButton()
     private let labelPopup = NSPopUpButton()
     private let sortPopup = NSPopUpButton()
@@ -22,8 +24,8 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         let root = NSVisualEffectView()
         root.material = .contentBackground
         root.blendingMode = .withinWindow
-        root.state = .active
 
+        formatPopup.addItem(withTitle: L10n.text("grid.all_formats"))
         formatPopup.target = self
         formatPopup.action = #selector(filterChanged(_:))
         labelPopup.addItems(withTitles: [
@@ -47,8 +49,14 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         ])
         controls.orientation = .horizontal
         controls.spacing = 10
-        controls.translatesAutoresizingMaskIntoConstraints = false
-        root.addSubview(controls)
+        controls.edgeInsets = NSEdgeInsets(top: 0, left: 16, bottom: 0, right: 16)
+        self.controls = controls
+        controlsScrollView.documentView = controls
+        controlsScrollView.hasHorizontalScroller = true
+        controlsScrollView.autohidesScrollers = true
+        controlsScrollView.drawsBackground = false
+        controlsScrollView.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(controlsScrollView)
 
         let layout = NSCollectionViewFlowLayout()
         layout.itemSize = NSSize(width: 150, height: 150)
@@ -73,15 +81,26 @@ final class GridViewController: NSViewController, NSCollectionViewDataSource, NS
         root.addSubview(scrollView)
 
         NSLayoutConstraint.activate([
-            controls.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
-            controls.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -16),
-            controls.topAnchor.constraint(equalTo: root.topAnchor, constant: 14),
+            controlsScrollView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            controlsScrollView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            controlsScrollView.topAnchor.constraint(equalTo: root.topAnchor, constant: 10),
+            controlsScrollView.heightAnchor.constraint(equalToConstant: 34),
             scrollView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            scrollView.topAnchor.constraint(equalTo: controls.bottomAnchor, constant: 8),
+            scrollView.topAnchor.constraint(equalTo: controlsScrollView.bottomAnchor, constant: 4),
             scrollView.bottomAnchor.constraint(equalTo: root.bottomAnchor),
         ])
         view = root
+    }
+
+    override func viewDidLayout() {
+        super.viewDidLayout()
+        guard let controls else { return }
+        controls.frame = NSRect(
+            x: 0, y: 0,
+            width: max(controls.fittingSize.width, controlsScrollView.contentSize.width),
+            height: controlsScrollView.contentSize.height
+        )
     }
 
     func update(items: [MediaItem], selectedID: MediaItem.ID?) {

@@ -1,6 +1,28 @@
 import AppKit
 import ImageviewCore
 
+private final class SelectionBackgroundView: NSView {
+    var selected = false {
+        didSet { needsDisplay = true }
+    }
+
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        needsDisplay = true
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        super.draw(dirtyRect)
+        guard selected else { return }
+        let outline = NSBezierPath(roundedRect: bounds.insetBy(dx: 0.75, dy: 0.75), xRadius: 9, yRadius: 9)
+        NSColor.controlAccentColor.withAlphaComponent(0.18).setFill()
+        outline.fill()
+        NSColor.controlAccentColor.setStroke()
+        outline.lineWidth = 1.5
+        outline.stroke()
+    }
+}
+
 @MainActor
 final class MediaCollectionItem: NSCollectionViewItem {
     static let identifier = NSUserInterfaceItemIdentifier("MediaCollectionItem")
@@ -10,11 +32,7 @@ final class MediaCollectionItem: NSCollectionViewItem {
     private var representedID: MediaItem.ID?
 
     override func loadView() {
-        let container = NSView()
-        container.wantsLayer = true
-        container.layer?.cornerRadius = 10
-        container.layer?.borderWidth = 1.5
-        container.layer?.borderColor = NSColor.clear.cgColor
+        let container = SelectionBackgroundView()
 
         let imageView = NSImageView()
         imageView.imageScaling = .scaleProportionallyUpOrDown
@@ -24,7 +42,8 @@ final class MediaCollectionItem: NSCollectionViewItem {
 
         nameLabel.alignment = .center
         nameLabel.lineBreakMode = .byTruncatingMiddle
-        nameLabel.font = .systemFont(ofSize: 11, weight: .medium)
+        nameLabel.font = .systemFont(ofSize: 12, weight: .medium)
+        nameLabel.textColor = .labelColor
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(nameLabel)
 
@@ -43,12 +62,7 @@ final class MediaCollectionItem: NSCollectionViewItem {
 
     override var isSelected: Bool {
         didSet {
-            view.layer?.backgroundColor = isSelected
-                ? NSColor.controlAccentColor.withAlphaComponent(0.18).cgColor
-                : NSColor.clear.cgColor
-            view.layer?.borderColor = isSelected
-                ? NSColor.controlAccentColor.cgColor
-                : NSColor.clear.cgColor
+            (view as? SelectionBackgroundView)?.selected = isSelected
         }
     }
 
@@ -56,6 +70,7 @@ final class MediaCollectionItem: NSCollectionViewItem {
         thumbnailTask?.cancel()
         representedID = item.id
         nameLabel.stringValue = item.url.lastPathComponent
+        nameLabel.toolTip = item.url.lastPathComponent
         imageView?.image = NSImage(systemSymbolName: "photo", accessibilityDescription: nil)
 
         let id = item.id

@@ -11,15 +11,16 @@ final class InspectorViewController: NSViewController {
     private let labelPopup = NSPopUpButton()
     private lazy var trashButton = button(
         L10n.text("inspector.trash"),
+        symbol: "trash",
         action: #selector(moveToTrash(_:))
     )
     private var item: MediaItem?
     private var recognizedText: String?
 
     override func loadView() {
-        let root = NSView()
-        root.wantsLayer = true
-        root.layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
+        let root = NSVisualEffectView()
+        root.material = .sidebar
+        root.blendingMode = .withinWindow
 
         labelPopup.addItems(withTitles: [
             L10n.text("label.no_label"), L10n.text("label.gray"), L10n.text("label.green"),
@@ -30,9 +31,9 @@ final class InspectorViewController: NSViewController {
         labelPopup.action = #selector(labelChanged(_:))
         labelPopup.setAccessibilityIdentifier("finderLabelPopup")
 
-        let reveal = button(L10n.text("inspector.show_finder"), action: #selector(revealInFinder(_:)))
-        let copyPath = button(L10n.text("inspector.copy_path"), action: #selector(copyPath(_:)))
-        let openDefault = button(L10n.text("inspector.open_default"), action: #selector(openInDefaultApp(_:)))
+        let reveal = button(L10n.text("inspector.show_finder"), symbol: "folder", action: #selector(revealInFinder(_:)))
+        let copyPath = button(L10n.text("inspector.copy_path"), symbol: "doc.on.doc", action: #selector(copyPath(_:)))
+        let openDefault = button(L10n.text("inspector.open_default"), symbol: "arrow.up.right.square", action: #selector(openInDefaultApp(_:)))
         trashButton.setAccessibilityIdentifier("inspectorTrashButton")
 
         let buttonGrid = NSGridView(views: [
@@ -54,7 +55,7 @@ final class InspectorViewController: NSViewController {
         textView.isEditable = false
         textView.isSelectable = true
         textView.drawsBackground = false
-        textView.font = .monospacedSystemFont(ofSize: 11, weight: .regular)
+        textView.font = .systemFont(ofSize: 12)
         textView.textContainerInset = NSSize(width: 8, height: 8)
         textView.setAccessibilityIdentifier("inspectorTextView")
 
@@ -125,9 +126,12 @@ final class InspectorViewController: NSViewController {
         textView.string = text
     }
 
-    private func button(_ title: String, action: Selector) -> NSButton {
+    private func button(_ title: String, symbol: String, action: Selector) -> NSButton {
         let button = NSButton(title: title, target: self, action: action)
         button.bezelStyle = .rounded
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: title)
+        button.imagePosition = .imageLeading
+        button.toolTip = title
         return button
     }
 

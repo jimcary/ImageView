@@ -120,7 +120,7 @@ final class ViewerWindowController:
             defer: false
         )
         window.title = "Imageview"
-        window.backgroundColor = NSColor(calibratedWhite: 0.08, alpha: 1)
+        window.backgroundColor = .windowBackgroundColor
         window.minSize = NSSize(width: 520, height: 360)
         window.center()
         super.init(window: window)
@@ -585,7 +585,7 @@ final class ViewerWindowController:
         let preferences = PreferencesStore()
         thumbnailStrip.setThumbnailSize(preferences.thumbnailSize)
         thumbnailHeightConstraint?.constant = CGFloat(preferences.thumbnailSize + 18)
-        thumbnailStrip.isHidden = !preferences.showsThumbnails
+        thumbnailStrip.isHidden = !preferences.showsThumbnails || session.snapshot.items.isEmpty
         session.applyPreferences()
     }
 
@@ -610,13 +610,11 @@ final class ViewerWindowController:
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
-            ToolbarID.open, ToolbarID.previous, ToolbarID.next, ToolbarID.flexible,
-            ToolbarID.previousPage, ToolbarID.nextPage, ToolbarID.slideshow,
-            ToolbarID.fit, ToolbarID.actual, ToolbarID.rotateLeft,
-            ToolbarID.rotateRight, ToolbarID.flip, ToolbarID.flipVertical, ToolbarID.crop,
-            ToolbarID.delete,
-            ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
-            ToolbarID.ocr,
+            ToolbarID.open, ToolbarID.previous, ToolbarID.next,
+            ToolbarID.fit, ToolbarID.rotateLeft, ToolbarID.rotateRight, ToolbarID.crop,
+            ToolbarID.delete, ToolbarID.grid, ToolbarID.thumbnails, ToolbarID.inspector,
+            ToolbarID.ocr, ToolbarID.flexible, ToolbarID.previousPage, ToolbarID.nextPage,
+            ToolbarID.slideshow, ToolbarID.actual, ToolbarID.flip, ToolbarID.flipVertical,
         ]
     }
 
@@ -633,9 +631,9 @@ final class ViewerWindowController:
         case ToolbarID.next:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.next"), symbol: "chevron.right", action: #selector(showNext(_:)))
         case ToolbarID.previousPage:
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.previous_page"), symbol: "doc.badge.arrow.up", action: #selector(showPreviousPage(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.previous_page"), symbol: "chevron.left.square", action: #selector(showPreviousPage(_:)))
         case ToolbarID.nextPage:
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.next_page"), symbol: "doc.badge.arrow.down", action: #selector(showNextPage(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.next_page"), symbol: "chevron.right.square", action: #selector(showNextPage(_:)))
         case ToolbarID.slideshow:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.slideshow"), symbol: "play.rectangle", action: #selector(toggleSlideshow(_:)))
         case ToolbarID.fit:
@@ -647,7 +645,7 @@ final class ViewerWindowController:
         case ToolbarID.rotateRight:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.rotate_right"), symbol: "rotate.right", action: #selector(rotateRight(_:)))
         case ToolbarID.flip:
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.flip"), symbol: "arrow.left.and.right.righttriangle.left.righttriangle.right", action: #selector(flipHorizontal(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.flip"), symbol: "flip.horizontal", action: #selector(flipHorizontal(_:)))
         case ToolbarID.flipVertical:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.flip_vertical"), symbol: "arrow.up.and.down.righttriangle.up.righttriangle.down", action: #selector(flipVertical(_:)))
         case ToolbarID.crop:
@@ -655,11 +653,11 @@ final class ViewerWindowController:
         case ToolbarID.delete:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.delete"), symbol: "trash", action: #selector(deleteCurrent(_:)))
         case ToolbarID.grid:
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.grid"), symbol: "square.grid.3x3", action: #selector(toggleGrid(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.grid"), symbol: "square.grid.2x2", action: #selector(toggleGrid(_:)))
         case ToolbarID.thumbnails:
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.thumbnails"), symbol: "rectangle.bottomthird.inset.filled", action: #selector(toggleThumbnails(_:)))
         case ToolbarID.inspector:
-            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.info"), symbol: "info.circle", action: #selector(toggleInspector(_:)))
+            return toolbarItem(itemIdentifier, label: L10n.text("toolbar.info"), symbol: "sidebar.right", action: #selector(toggleInspector(_:)))
         case ToolbarID.ocr:
             guard SystemCapabilities.ocrAvailable else { return nil }
             return toolbarItem(itemIdentifier, label: L10n.text("toolbar.ocr"), symbol: "text.viewfinder", action: #selector(performOCR(_:)))
@@ -791,6 +789,7 @@ final class ViewerWindowController:
         canvas.errorMessage = snapshot.errorMessage
         canvas.isLoading = snapshot.isLoading
         thumbnailStrip.update(items: snapshot.items, selectedID: snapshot.current?.id)
+        thumbnailStrip.isHidden = !PreferencesStore().showsThumbnails || snapshot.items.isEmpty
         gridController.update(items: snapshot.items, selectedID: snapshot.current?.id)
         inspectorController.update(
             item: snapshot.current,
