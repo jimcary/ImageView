@@ -10,6 +10,7 @@ final class AppDelegate:
 {
     private let startupURLs: [URL]
     private var windowControllers: [ViewerWindowController] = []
+    private var aboutWindowController: AboutWindowController?
     private var preferencesWindowController: PreferencesWindowController?
     private var recentMenu: NSMenu?
 
@@ -66,6 +67,12 @@ final class AppDelegate:
         if PreferencesStore().clearsRecentItems {
             NSDocumentController.shared.clearRecentDocuments(nil)
         }
+    }
+
+    @objc private func showAbout(_ sender: Any?) {
+        let controller = aboutWindowController ?? AboutWindowController()
+        aboutWindowController = controller
+        controller.showWindow(sender)
     }
 
     @objc private func openDocument(_ sender: Any?) {
@@ -169,6 +176,8 @@ final class AppDelegate:
 
     private func reloadLanguage() {
         configureMainMenu()
+        aboutWindowController?.close()
+        aboutWindowController = nil
         let previousControllers = windowControllers
         let urls = previousControllers.map(\.currentURL)
         windowControllers.removeAll()
@@ -208,11 +217,12 @@ final class AppDelegate:
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(
+        let aboutItem = appMenu.addItem(
             withTitle: L10n.text("app.about"),
-            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+            action: #selector(showAbout(_:)),
             keyEquivalent: ""
         )
+        aboutItem.target = self
         appMenu.addItem(.separator())
         let preferences = appMenu.addItem(
             withTitle: L10n.text("menu.preferences"),

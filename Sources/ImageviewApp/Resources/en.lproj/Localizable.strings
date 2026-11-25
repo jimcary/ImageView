@@ -1,4 +1,6 @@
-"app.about" = "About Imageview";
+"app.about" = "About ImageView";
+"app.about.author" = "Author:";
+"app.about.website" = "Project website:";
 "app.quit" = "Quit Imageview";
 "menu.file" = "File";
 "menu.edit" = "Edit";

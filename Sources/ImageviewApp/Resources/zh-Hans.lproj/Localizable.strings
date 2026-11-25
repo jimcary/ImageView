@@ -1,4 +1,6 @@
-"app.about" = "关于 Imageview";
+"app.about" = "关于 ImageView";
+"app.about.author" = "作者：";
+"app.about.website" = "项目网址：";
 "app.quit" = "退出 Imageview";
 "menu.file" = "文件";
 "menu.edit" = "编辑";
