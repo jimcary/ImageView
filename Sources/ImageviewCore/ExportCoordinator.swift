@@ -120,7 +120,39 @@ public struct ExportCoordinator {
             try fileManager.moveItem(at: temporaryURL, to: destinationURL)
         } catch {
             try? fileManager.removeItem(at: temporaryURL)
+            if (error as? CocoaError)?.code == .fileWriteFileExists {
+                throw ExportError.targetExists
+            }
             throw error
+        }
+    }
+
+    @discardableResult
+    public func saveBesideSource(
+        image: CGImage,
+        sourceProperties: [CFString: Any]?,
+        sourceURL: URL,
+        format: ExportFormat,
+        metadataPolicy: MetadataPolicy
+    ) throws -> URL {
+        let folder = sourceURL.deletingLastPathComponent()
+        let baseName = sourceURL.deletingPathExtension().lastPathComponent
+        var number = 1
+        while true {
+            let name = number == 1 ? baseName : "\(baseName)\(number)"
+            let destination = folder.appendingPathComponent("\(name).\(format.fileExtension)")
+            do {
+                try saveAs(
+                    image: image,
+                    sourceProperties: sourceProperties,
+                    destinationURL: destination,
+                    format: format,
+                    metadataPolicy: metadataPolicy
+                )
+                return destination
+            } catch ExportError.targetExists {
+                number += 1
+            }
         }
     }
 
@@ -252,7 +284,7 @@ public struct ExportCoordinator {
 
     private func siblingTemporaryURL(for destination: URL, format: ExportFormat) -> URL {
         destination.deletingLastPathComponent().appendingPathComponent(
-            ".\(destination.lastPathComponent).imageview-\(UUID().uuidString).\(format.fileExtension)"
+            ".imageview-\(UUID().uuidString).\(format.fileExtension)"
         )
     }
 

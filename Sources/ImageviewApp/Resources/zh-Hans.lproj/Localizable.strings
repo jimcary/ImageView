@@ -81,7 +81,6 @@
 "action.cancel" = "取消";
 "error.copy_failed" = "复制失败";
 "error.save_failed" = "保存失败";
-"error.target_exists" = "该位置已有同名文件，请选择其他文件名。";
 "error.overwrite_failed" = "覆盖失败";
 "error.ocr_failed" = "文字识别失败";
 "error.subject_failed" = "主体提取失败";

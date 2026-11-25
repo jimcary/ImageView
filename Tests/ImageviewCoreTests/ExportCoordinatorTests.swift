@@ -32,6 +32,74 @@ func formatConversionProducesReopenableImagesWithoutOverwriting() throws {
 }
 
 @Test
+func formatConversionSavesBesideSourceUsingFirstAvailableName() throws {
+    let folder = FileManager.default.temporaryDirectory
+        .appendingPathComponent("ImageviewConversion-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let original = folder.appendingPathComponent("照片.v1.png")
+    let image = try TestImageFixtures.image(width: 45, height: 25)
+    let coordinator = ExportCoordinator()
+    try coordinator.saveAs(
+        image: image, sourceProperties: nil, destinationURL: original,
+        format: .png, metadataPolicy: .remove
+    )
+    let originalBytes = try Data(contentsOf: original)
+
+    for format: ExportFormat in [.jpeg(quality: 0.9), .png, .gif, .webp(quality: 0.9)] {
+        let suffixes = format == .png ? ["2", "3"] : ["", "2", "3"]
+        var exports: [URL: Data] = [:]
+        for suffix in suffixes {
+            let exported = try coordinator.saveBesideSource(
+                image: image, sourceProperties: nil, sourceURL: original,
+                format: format, metadataPolicy: .remove
+            )
+            #expect(exported == folder.appendingPathComponent("照片.v1\(suffix).\(format.fileExtension)"))
+            let source = try #require(CGImageSourceCreateWithURL(exported as CFURL, nil))
+            #expect(CGImageSourceGetType(source) as String? == format.typeIdentifier as String)
+            let decoded = try ImageDecoder().decode(url: exported)
+            #expect(decoded.pixelSize == CGSize(width: 45, height: 25))
+            exports[exported] = try Data(contentsOf: exported)
+        }
+        for (url, bytes) in exports {
+            #expect(try Data(contentsOf: url) == bytes)
+        }
+    }
+    #expect(try Data(contentsOf: original) == originalBytes)
+}
+
+@Test
+func formatConversionRetriesWhenAnotherFileAppearsBeforeMove() throws {
+    let folder = FileManager.default.temporaryDirectory
+        .appendingPathComponent("ImageviewConversion-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    let original = folder.appendingPathComponent("photo.png")
+    let occupied = folder.appendingPathComponent("photo.jpg")
+    let image = try TestImageFixtures.image()
+    try ExportCoordinator().saveAs(
+        image: image, sourceProperties: nil, destinationURL: original,
+        format: .png, metadataPolicy: .remove
+    )
+    let existingBytes = Data("another export".utf8)
+    let coordinator = ExportCoordinator(validator: { url, size in
+        if !FileManager.default.fileExists(atPath: occupied.path) {
+            try? existingBytes.write(to: occupied, options: .withoutOverwriting)
+        }
+        return ExportCoordinator.defaultValidator(url: url, expectedPixelSize: size)
+    })
+
+    let exported = try coordinator.saveBesideSource(
+        image: image, sourceProperties: nil, sourceURL: original,
+        format: .jpeg(quality: 0.9), metadataPolicy: .remove
+    )
+    #expect(exported == folder.appendingPathComponent("photo2.jpg"))
+    #expect(try Data(contentsOf: occupied) == existingBytes)
+    let files = try FileManager.default.contentsOfDirectory(atPath: folder.path)
+    #expect(Set(files) == ["photo.png", "photo.jpg", "photo2.jpg"])
+}
+
+@Test
 func webpConversionPreservesImageOrientation() throws {
     let folder = FileManager.default.temporaryDirectory
         .appendingPathComponent("ImageviewWebP-\(UUID().uuidString)", isDirectory: true)

@@ -11,7 +11,7 @@ Imageview is a local macOS image viewer for macOS 12 and later. It is a universa
 - **便捷浏览**：打开单张图片、多张图片或文件夹，通过方向键、工具栏、缩略图栏和网格浏览；支持全屏、缩放、适应窗口和实际尺寸查看。
 - **整理与查找**：在网格中按格式和 Finder 标签筛选，按名称、扩展名、日期、Finder 顺序等排序；支持显示文件信息、在 Finder 中定位和移到废纸篓。
 - **图片处理**：支持旋转、水平或垂直翻转、画布裁剪，以及通过右键菜单调整像素尺寸；调整大小提供常用尺寸预设、自定义宽高和等比缩放。
-- **格式转换**：右键选择「格式转换」，可将当前显示的图片保存为 JPG、PNG、GIF 或 WebP 新文件，不会覆盖已有文件。
+- **格式转换**：右键选择 JPG、PNG、GIF 或 WebP，图片立即以原文件名和目标扩展名保存到原图目录，无需确认。重名时自动加上数字，例如「照片2.jpg」「照片3.jpg」。
 - **动态图片与文档**：播放 GIF、APNG、WebP 和 HEICS 动画，浏览 PDF 等多页文档，并可按设置的间隔播放幻灯片。
 - **文字识别与贴图**：在本机识别图片文字，结果可在信息侧栏中选择和复制；可将图片或剪贴板图片贴到桌面。
 - **符合使用习惯**：支持中文、英文及跟随系统语言，可设置快捷键、缩略图大小、循环浏览、文件夹递归扫描和缓存上限。
@@ -60,7 +60,7 @@ open -a "$(pwd)/dist/Imageview.app" /path/to/folder
 - Slideshow uses the interval configured in Settings and stops at the end when loop navigation is disabled.
 - Choose Crop, then drag directly on the canvas to create, move, or resize the selection. Press ⌘K to overwrite a supported original image.
 - Right-click and choose Resize to set pixel dimensions for a single-frame image. Press ⌘S to overwrite a supported original image with the current edits.
-- Right-click and choose Convert Format to export the displayed frame or page as a new JPG, PNG, GIF, or WebP file. Existing files are not overwritten. WebP export does not preserve source metadata and is limited to 16,383 pixels per side and 100 million pixels total.
+- Right-click and choose Convert Format to save the displayed frame or page as JPG, PNG, GIF, or WebP in the original folder. Export starts immediately and uses the original base name, adding a number if needed (for example, `photo.jpg`, `photo2.jpg`, `photo3.jpg`). WebP export does not preserve source metadata and is limited to 16,383 pixels per side and 100 million pixels total.
 - Press Delete to move the current image to the Trash.
 - Right-click the canvas for OCR, actual size, fit to window, resizing, sorting, rotate/flip/crop, Finder labels, pinning, Finder/default-app actions, copy, and Delete.
 - OCR runs locally.

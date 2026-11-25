@@ -1,6 +1,5 @@
 import AppKit
 import ImageviewCore
-import UniformTypeIdentifiers
 
 private final class ViewerWindow: NSWindow {
     var onDeleteRequested: (() -> Bool)?
@@ -282,24 +281,15 @@ final class ViewerWindowController:
         default: return
         }
 
-        let panel = NSSavePanel()
-        panel.directoryURL = current.url.deletingLastPathComponent()
-        panel.nameFieldStringValue = current.url.deletingPathExtension().lastPathComponent + "-converted." + ext
-        panel.allowedContentTypes = [UTType(filenameExtension: ext) ?? UTType(importedAs: "org.webmproject.webp")]
-        guard panel.runModal() == .OK, let destination = panel.url else { return }
-        guard session.snapshot.current?.id == current.id,
-              session.snapshot.decodedMediaID == current.id else { return }
         do {
             let image = try session.renderedCurrentImage()
-            try ExportCoordinator().saveAs(
+            try ExportCoordinator().saveBesideSource(
                 image: image,
                 sourceProperties: ExportMetadata.adjustedProperties(session.snapshot.sourceProperties ?? [:], renderedImage: image),
-                destinationURL: destination,
+                sourceURL: current.url,
                 format: format,
                 metadataPolicy: .preserve
             )
-        } catch ExportError.targetExists {
-            presentMessage(title: L10n.text("error.save_failed"), message: L10n.text("error.target_exists"))
         } catch {
             presentError(title: L10n.text("error.save_failed"), error: error)
         }
