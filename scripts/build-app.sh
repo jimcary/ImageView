@@ -31,6 +31,7 @@ cp "$repo_root/Info.plist" "$staging_path/Contents/Info.plist"
 cp -R "$repo_root/Sources/ImageviewApp/Resources/en.lproj" "$resources_path/"
 cp -R "$repo_root/Sources/ImageviewApp/Resources/zh-Hans.lproj" "$resources_path/"
 cp "$repo_root/Imageview.icns" "$resources_path/Imageview.icns"
+install -m 644 "$repo_root/LICENSE" "$resources_path/Imageview-LICENSE.txt"
 install -m 644 "$repo_root/.build/checkouts/libwebp-Xcode/libwebp/COPYING" "$resources_path/libwebp-LICENSE.txt"
 install -m 644 "$repo_root/.build/checkouts/libwebp-Xcode/libwebp/PATENTS" "$resources_path/libwebp-PATENTS.txt"
 

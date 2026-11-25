@@ -10,7 +10,8 @@
 
 ## 近期更新
 
-- **v1.0.3 · 转换后直接保存**。右键选择 JPG、PNG、GIF 或 WebP，文件立即保存到原图目录，无需确认。例如，转换为 JPG 时优先使用 `照片.jpg`，重名则依次尝试 `照片2.jpg`、`照片3.jpg`，保留原图和已有文件。[发行说明](https://github.com/jimcary/ImageView/releases/tag/v1.0.3)
+- **v1.0.4 · MIT 开源授权**。README 更新了产品介绍和近期功能，安装包内附带 [MIT 许可证](LICENSE)。
+- **v1.0.3 · 转换后直接保存**。右键选择 JPG、PNG、GIF 或 WebP，文件立即保存到原图目录，无需确认。例如，转换为 JPG 时优先使用 `照片.jpg`，重名则依次尝试 `照片2.jpg`、`照片3.jpg`，保留原图和已有文件。[查看源码标签](https://github.com/jimcary/ImageView/tree/v1.0.3)
 - **v1.0.2 · 浏览界面更新**。画布跟随系统浅色和深色外观，工具栏与信息侧栏采用更易辨认的图标，窄窗口中的网格筛选栏支持横向滚动。[发行说明](https://github.com/jimcary/ImageView/releases/tag/v1.0.2)
 
 ## 主要功能与亮点
