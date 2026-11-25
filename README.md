@@ -4,14 +4,21 @@
 
 <h1 align="center">ImageView</h1>
 
-Imageview is a local macOS image viewer for macOS 12 and later. It is a universal app: the packaged release includes both Apple Silicon and Intel executables.
+**让 Mac 上的日常看图更顺手。** ImageView 是一款原生 macOS 图片查看器。打开图片或文件夹，就能用键盘和缩略图快速浏览，需要时可直接裁剪、调整大小或转换格式。所有操作都在本机完成。
+
+支持 macOS 12 及以上，提供 Intel 与 Apple 芯片通用版。[下载安装包](https://github.com/jimcary/ImageView/releases/latest)
+
+## 近期更新
+
+- **v1.0.3 · 转换后直接保存**。右键选择 JPG、PNG、GIF 或 WebP，文件立即保存到原图目录，无需确认。例如，转换为 JPG 时优先使用 `照片.jpg`，重名则依次尝试 `照片2.jpg`、`照片3.jpg`，保留原图和已有文件。[发行说明](https://github.com/jimcary/ImageView/releases/tag/v1.0.3)
+- **v1.0.2 · 浏览界面更新**。画布跟随系统浅色和深色外观，工具栏与信息侧栏采用更易辨认的图标，窄窗口中的网格筛选栏支持横向滚动。[发行说明](https://github.com/jimcary/ImageView/releases/tag/v1.0.2)
 
 ## 主要功能与亮点
 
 - **便捷浏览**：打开单张图片、多张图片或文件夹，通过方向键、工具栏、缩略图栏和网格浏览；支持全屏、缩放、适应窗口和实际尺寸查看。
 - **整理与查找**：在网格中按格式和 Finder 标签筛选，按名称、扩展名、日期、Finder 顺序等排序；支持显示文件信息、在 Finder 中定位和移到废纸篓。
 - **图片处理**：支持旋转、水平或垂直翻转、画布裁剪，以及通过右键菜单调整像素尺寸；调整大小提供常用尺寸预设、自定义宽高和等比缩放。
-- **格式转换**：右键选择 JPG、PNG、GIF 或 WebP，图片立即以原文件名和目标扩展名保存到原图目录，无需确认。重名时自动加上数字，例如「照片2.jpg」「照片3.jpg」。
+- **格式转换**：通过右键菜单将当前图片、动画帧或 PDF 页面导出为 JPG、PNG、GIF 或 WebP。
 - **动态图片与文档**：播放 GIF、APNG、WebP 和 HEICS 动画，浏览 PDF 等多页文档，并可按设置的间隔播放幻灯片。
 - **文字识别与贴图**：在本机识别图片文字，结果可在信息侧栏中选择和复制；可将图片或剪贴板图片贴到桌面。
 - **符合使用习惯**：支持中文、英文及跟随系统语言，可设置快捷键、缩略图大小、循环浏览、文件夹递归扫描和缓存上限。
@@ -67,8 +74,12 @@ open -a "$(pwd)/dist/Imageview.app" /path/to/folder
 - Settings includes English, Simplified Chinese, system language, single/multi-window behavior, folder recursion, thumbnail sizing, slideshow interval, cache size, and configurable shortcuts.
 - User-selected folders are remembered with security-scoped bookmarks. Imageview never requests Full Disk Access.
 
-## Privacy and licensing
+## Privacy
 
 Imageview works entirely on your Mac. It has no online licensing, account sign-in, telemetry, or network service requirement. Images, edits, pins, and recognized text remain local unless you explicitly save, copy, or share them.
+
+## License
+
+ImageView's source code is available under the [MIT License](LICENSE). Third-party dependencies retain their own licenses.
 
 WebP encoding uses [libwebp](https://github.com/webmproject/libwebp) via [libwebp-Xcode](https://github.com/SDWebImage/libwebp-Xcode). Its license and patent notice are included in the app bundle.
